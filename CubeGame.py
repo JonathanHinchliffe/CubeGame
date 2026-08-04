@@ -3,8 +3,8 @@ import random
 import GameObjects
 
 window = Tk()
-canvasWidth = 1700
-canvasHeight = 900
+canvasWidth = 1280
+canvasHeight = 720
 canvas = Canvas(window, width=canvasWidth, height=canvasHeight, bg="white" )
 canvas.pack()
 

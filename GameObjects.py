@@ -50,11 +50,43 @@ class Game_Object(ABC):
     def render(self):
         pass
 
+class Collision_Model(ABC):
 
-class Cube(Game_Object):
+    @abstractmethod
+    def collision_check(self):
+        pass
+
+class Collision_Rectangle(Collision_Model):
+
+    def __init__(self, width, height, position= dict(x = 0, y = 0)):
+        self.width = width
+        self.height = height
+        self.position = position
+        self.calculate_outline()
+
+    def calculate_outline(self):
+        #vertex
+        #top left, top right, bottom left, bottom right
+        vertexs = ((round(self.position["x"]-(self.width//2)), round(self.position["y"]-(self.height//2))),
+                    (round(self.position["x"]+(self.width//2)), round(self.position["y"]-(self.height//2))),
+                    (round(self.position["x"]-(self.width//2)), round(self.position["y"]+(self.height//2))),
+                    (round(self.position["x"]+(self.width//2)), round(self.position["y"]+(self.height//2))))
+        #edges
+        #top, left, right, bottom
+        edges = ((vertexs[0],vertexs[1]),(vertexs[0],vertexs[2]),(vertexs[1],vertexs[3]),(vertexs[2],vertexs[3]))
+        self.vertices = vertexs
+        self.edges = edges
+
+    def collision_check(self):
+        self.calculate_outline()
+        #print(self.edges)
+        
+
+class Cube(Game_Object, Collision_Rectangle):
 
     def __init__(self, size, position = dict(x = 0, y = 0), velocity = Velocity(0,0), colour="grey"):
         self.size = size #size in px
+        super().__init__(size,size, position)
         self.position = position
         self.velocity = velocity
         self.colour = colour
@@ -65,9 +97,11 @@ class Cube(Game_Object):
         ##some way for framerate to become independent of velocity
 
 
-        self.position["x"] = self.position["x"] + (self.velocity.x)
-        self.position["y"] = self.position["y"] + (self.velocity.y)
+        self.position["x"] = round(self.position["x"] + (self.velocity.x),2)
+        self.position["y"] = round(self.position["y"] + (self.velocity.y),2)
+        self.collision_check()
         print(self.position)
+
 
     def render(self, canvas):
         canvas.create_rectangle(self.position["x"]-(self.size//2), self.position["y"]-(self.size//2), self.position["x"]+(self.size//2), self.position["y"]+(self.size//2), fill=self.colour)
