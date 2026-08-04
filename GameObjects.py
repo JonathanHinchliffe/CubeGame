@@ -77,10 +77,15 @@ class Collision_Rectangle(Collision_Model):
         self.vertices = vertexs
         self.edges = edges
 
-    def collision_check(self):
+    def collision_check(self, objects = []):
         self.calculate_outline()
+        for o in objects:
+            if isinstance(o, Border):
+                self.border_collision_check(o)
         #print(self.edges)
-        
+    
+    def border_collision_check(self,o):
+        pass    
 
 class Cube(Game_Object, Collision_Rectangle):
 
@@ -91,7 +96,7 @@ class Cube(Game_Object, Collision_Rectangle):
         self.velocity = velocity
         self.colour = colour
 
-    def position_update(self, frame_rate = 30):
+    def position_update(self, objects = [],frame_rate = 30):
         ## TODO
         ## need collision method
         ##some way for framerate to become independent of velocity
@@ -99,11 +104,37 @@ class Cube(Game_Object, Collision_Rectangle):
 
         self.position["x"] = round(self.position["x"] + (self.velocity.x),2)
         self.position["y"] = round(self.position["y"] + (self.velocity.y),2)
-        self.collision_check()
-        print(self.position)
+        self.collision_check(objects)
+        #print(self.position)
 
+    def border_collision_check(self, o):
+        if self.vertices[0][0] < 0 and self.vertices[0][1] > 0 and self.vertices[2][0] < 0 and self.vertices[2][1] < o.height:
+            #left wall bounce
+            if self.velocity.angle < 270:
+                self.velocity.angle -= 90
+            else:
+                self.velocity.angle = (self.velocity+90)%360
+        #top bounce        
+        elif self.vertices[0][0] > 0 and self.vertices[0][1] < 0 and self.vertices[1][0] < o.width and self.vertices[1][1] < 0:
+            if self.velocity.angle < 90:
+                self.velocity.angle += 90
+            else:
+                self.velocity.angle -= 90
 
     def render(self, canvas):
         canvas.create_rectangle(self.position["x"]-(self.size//2), self.position["y"]-(self.size//2), self.position["x"]+(self.size//2), self.position["y"]+(self.size//2), fill=self.colour)
 
+class Border(Collision_Rectangle):
 
+    def __init__(self, width, height):
+        super().__init__(width, height)
+
+    def calculate_outline(self):
+        vertexs = ((0,0), (self.width,0), (0,self.height), (self.width, self.height))
+        edges = ((vertexs[0],vertexs[1]),(vertexs[0],vertexs[2]),(vertexs[1],vertexs[3]),(vertexs[2],vertexs[3]))
+
+        self.vertices = vertexs
+        self.edges = edges
+
+    def collision_check(self):
+        return super().collision_check()
