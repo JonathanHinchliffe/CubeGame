@@ -1,59 +1,6 @@
 from abc import ABC, abstractmethod
 import math
-from re import A
 
-class Velocity():
-
-
-    def __init__(self, speed = 0, angle = 0):
-        self.speed = speed
-        self.angle = angle
-        self.x = self.calculate_x()
-        self.y = self.calculate_y()
-        
-    def calculate_x(self):
-        if self.angle == 0 or self.angle == 180:
-            return 0
-        elif self.angle == 90:
-            return self.speed
-        elif self.angle == 270:
-            return -self.speed
-        else:
-            if (0 < self.angle < 90) or (180 < self.angle < 270):
-                x = self.speed * (math.sin((math.radians(self.angle%90))))
-            elif (90 < self.angle < 180) or (270 < self.angle < 360):
-                x = self.speed * (math.cos(math.radians(self.angle%90)))
-            if self.angle > 180:
-                x -= x
-            return round(x,2)
-        
-    def calculate_y(self):
-        if self.angle == 90 or self.angle == 270:
-            return 0
-        elif self.angle == 0:
-            return -self.speed
-        elif self.angle == 180:
-            return self.speed
-        else:
-            if (90 < self.angle < 180) or (270 < self.angle < 360):
-                y = self.speed * (math.sin(math.radians(self.angle%90)))
-            elif (0 < self.angle < 90) or (180 < self.angle < 270):
-                y = self.speed * (math.cos(math.radians(self.angle%90)))
-            if 90 > self.angle or self.angle > 270:
-                y = -y
-            return round(y,2)
-
-    def update_components(self):
-        self.x = self.calculate_x()
-        self.y = self.calculate_y()
-
-    def set_speed(self, speed):
-        self.speed = speed
-        self.update_components()
-
-    def set_angle(self, angle):
-        self.angle = angle
-        self.update_components()
 
 class Game_Object(ABC):
     
@@ -103,7 +50,77 @@ class Collision_Rectangle(Collision_Model):
         return (border_collisions, collisions)
     
     def border_collision_check(self,o):
-        pass    
+        pass
+
+class Velocity:
+
+
+    def __init__(self, angle = 0, speed = 0):
+        self.speed = speed
+        self.angle = angle
+        #print(speed, angle)
+        if self.speed != 0:
+            self.update_components(message="Speed not 0 on init")
+        
+    def calculate_x(self):
+        if self.speed == 0:
+            return 0
+        if self.angle == 0 or self.angle == 180:
+            #print("What?")
+            return 0
+        elif self.angle == 90:
+            return self.speed
+        elif self.angle == 270:
+            return -self.speed
+        else:
+            if (0 < self.angle < 90) or (180 < self.angle < 270):
+                x = self.speed * (math.sin((math.radians(self.angle%90))))
+                #print("Opp")
+            elif (90 < self.angle < 180) or (270 < self.angle < 360):
+                x = self.speed * (math.cos(math.radians(self.angle%90)))
+            if self.angle > 180:
+                print
+                x = -x
+            return round(x,2)
+        
+    def calculate_y(self):
+        if self.speed == 0:
+            return 0
+        if self.angle == 90 or self.angle == 270:
+            return 0
+        elif self.angle == 0:
+            return -self.speed
+        elif self.angle == 180:
+            return self.speed
+        else:
+            if (90 < self.angle < 180) or (270 < self.angle < 360):
+                y = self.speed * (math.sin(math.radians(self.angle%90)))
+            elif (0 < self.angle < 90) or (180 < self.angle < 270):
+                y = self.speed * (math.cos(math.radians(self.angle%90)))
+            if 90 > self.angle or self.angle > 270:
+                y = -y
+            return round(y,2)
+
+    def update_components(self, message=""):
+        show_message = False
+        if message != "" and show_message:
+            print(message)
+        self.x = self.calculate_x()
+        self.y = self.calculate_y()
+
+    def set_speed(self, speed):
+        self.speed = speed
+        self.update_components(message="Changed speed")
+
+    def set_angle(self, angle):
+        if angle < 0:
+            angle = 360-angle
+        if angle > 360:
+            angle -= 360
+        self.angle = angle
+        self.update_components(message="Changed angle")
+
+
 
 class Cube(Game_Object, Collision_Rectangle):
 
@@ -119,6 +136,7 @@ class Cube(Game_Object, Collision_Rectangle):
         self.position_update()
         collisions = self.collision_check(objects)
         if type(collisions[0]) != bool and self.can_bounce:
+            #print(collisions[0])
             self.bounce(collisions[0])
 
     def position_update(self,frame_rate = 30):
@@ -152,11 +170,9 @@ class Cube(Game_Object, Collision_Rectangle):
             #left bounce
             #angle is between 181 and 359 but not 270
             if self.velocity.angle > 270:
-                self.velocity.set_angle(round((self.velocity.angle - (180 + (2*(self.velocity.angle-180))))%360))
+                self.velocity.set_angle(round(360-self.velocity.angle))
             if self.velocity.angle < 270:
-                new_angle = round((180-(2*(90-(360-self.velocity.angle))))-(360-self.velocity.angle))
-                print(new_angle)
-                self.velocity.set_angle(new_angle)
+                self.velocity.set_angle(round(self.velocity.angle-90))
 
             #print(self.velocity.angle, "After bounce")
             self.position_update()
@@ -167,9 +183,9 @@ class Cube(Game_Object, Collision_Rectangle):
             #angle is between 1 and 179 but not 90
             #print(self.velocity.angle, "Before bounce")
             if self.velocity.angle > 90:
-                self.velocity.set_angle(round(self.velocity.angle + (180 - (2*(90-(180-self.velocity.angle))))))
+                self.velocity.set_angle(round(360-self.velocity.angle))
             if self.velocity.angle < 90:
-                self.velocity.set_angle(round(360-((180-(2*(90-self.velocity.angle))) -self.velocity.angle)))
+                self.velocity.set_angle(round(360-self.velocity.angle))
             self.position_update()
             #print(self.velocity.angle, "After bounce")
         
@@ -177,9 +193,9 @@ class Cube(Game_Object, Collision_Rectangle):
             #top bounce
             #angle is betweem 1 and 90 or 270 and 360
             if self.velocity.angle < 90:
-                self.velocity.set_angle(round(self.velocity.angle+(180-(2*(180-(90-self.velocity.angle))))))
+                self.velocity.set_angle(round(180-self.velocity.angle))
             if self.velocity.angle > 270:
-                self.velocity.set_angle(round(360-((360-self.velocity.angle)+(180-(2*(90-(90-(360-self.velocity.angle))))))))
+                self.velocity.set_angle(round(540-self.velocity.angle))
             self.position_update()
             return
         
@@ -187,9 +203,10 @@ class Cube(Game_Object, Collision_Rectangle):
             #bottom bounce
             #angle is between 91 and 269 but not 180
             if self.velocity.angle < 180:
-                self.velocity.set_angle(round(self.velocity.angle-(180-(180-(2*(90-(180-self.velocity.angle)))))))
+                self.velocity.set_angle(round(180-self.velocity.angle))
             if self.velocity.angle > 180:
-                self.velocity.set_angle(round((180-(2*(90-(self.velocity.angle-180))))+self.velocity.angle))
+                self.velocity.set_angle(round(540-self.velocity.angle))
+                #print("Bounce", self.velocity.angle, self.velocity.x)
             self.position_update()
             return
 
@@ -230,3 +247,5 @@ class Border(Collision_Rectangle):
 
     def collision_check(self):
         return super().collision_check()
+
+

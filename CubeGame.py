@@ -9,30 +9,20 @@ canvas = Canvas(window, width=canvasWidth, height=canvasHeight, bg="white" )
 canvas.pack()
 
 
-#goes top right
-vel1 = GameObjects.Velocity(10, 45)
-cube1 = GameObjects.Cube(size = 20, position = dict(x=500, y=100),velocity=vel1)
-
-#goes bottom right
-vel2 = GameObjects.Velocity(10, 135)
-cube2 = GameObjects.Cube(size = 20, position = dict(x=500, y=100),velocity=vel2, colour="blue")
-
-#bottom left
-vel3 = GameObjects.Velocity(10, 190)
-cube3 = GameObjects.Cube(size = 20, position = dict(x=500, y=100),velocity=vel3, colour="red")
-
-#top right
-vel4 = GameObjects.Velocity(10, 315)
-cube4 = GameObjects.Cube(size = 20, position = dict(x=500, y=100),velocity=vel4, colour="green")
-
 border = GameObjects.Border(canvasWidth, canvasHeight)
-cubes = [cube1,cube2,cube3,cube4]
-
+#cubes = [cube1,cube2,cube3,cube4]
+colours = ["red", "blue", "green", "yellow", "pink", "brown", "grey"]
+i = 0
+cubes = []
+for i in range(30):
+    vel = GameObjects.Velocity(angle=random.randint(0,359), speed=random.randint(5,30))
+    cubes.append(GameObjects.Cube(size=random.randint(10,40), position=dict(x=random.randint(100,canvasWidth),y=random.randint(50,canvasHeight)), velocity=vel, colour=colours[i%len(colours)]))
 
 def updateCanvas():
     canvas.delete("all")
-    cube3.frame_update([border])
-    cube3.render(canvas)
+    for cube in cubes:
+        cube.render(canvas)
+        cube.frame_update([border])
     #print("render complete")
     window.after(100, updateCanvas)
 
