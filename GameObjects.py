@@ -29,13 +29,17 @@ class Collision_Rectangle(Collision_Model):
     def calculate_outline(self):
         #vertex
         #top left, top right, bottom left, bottom right
-        vertexs = ((round(self.position["x"]-(self.width//2)), round(self.position["y"]-(self.height//2))),
-                    (round(self.position["x"]+(self.width//2)), round(self.position["y"]-(self.height//2))),
-                    (round(self.position["x"]-(self.width//2)), round(self.position["y"]+(self.height//2))),
-                    (round(self.position["x"]+(self.width//2)), round(self.position["y"]+(self.height//2))))
+        vertexs = dict(top_left = (round(self.position["x"]-(self.width//2)), round(self.position["y"]-(self.height//2))),
+                    top_right = (round(self.position["x"]+(self.width//2)), round(self.position["y"]-(self.height//2))),
+                    bottom_left = (round(self.position["x"]-(self.width//2)), round(self.position["y"]+(self.height//2))),
+                    bottom_right = (round(self.position["x"]+(self.width//2)), round(self.position["y"]+(self.height//2))))
         #edges
         #top, left, right, bottom
-        edges = ((vertexs[0],vertexs[1]),(vertexs[0],vertexs[2]),(vertexs[1],vertexs[3]),(vertexs[2],vertexs[3]))
+        #each edge contains min/max and opp
+        edges = dict(top = dict(min_x = vertexs["top_left"][0],max_x = vertexs["top_right"][0],y = vertexs["top_left"][1]),
+                     left = dict(min_y =vertexs["top_left"][1],max_y = vertexs["bottom_left"][1],x = vertexs["top_left"][0]), 
+                     right = dict(min_y =vertexs["top_right"][1],max_y =vertexs["bottom_right"][1], x = vertexs["top_right"][0]),
+                     bottom = dict(min_x =vertexs["bottom_left"][0],max_x=vertexs["bottom_right"][0], y = vertexs["bottom_right"][1]))
         self.vertices = vertexs
         self.edges = edges
 
@@ -46,6 +50,12 @@ class Collision_Rectangle(Collision_Model):
             if isinstance(o, Border):
                 border_collisions = self.border_collision_check(o)
                     #there has been a collision
+            else:
+                for key, value in o.vertices.items():
+                    if (self.edges["top"]["min_x"] <= value[0] <= self.edges["top"]["max_x"]) and (self.edges["left"]["min_y"]<= value[1] <= self.edges["left"]["max_y"]):
+                        #vertex is within this cube
+                        collisions.append([o, key])
+                        
         #print(self.edges)
         return (border_collisions, collisions)
     
@@ -73,13 +83,13 @@ class Velocity:
         elif self.angle == 270:
             return -self.speed
         else:
+            #print(self.angle)
             if (0 < self.angle < 90) or (180 < self.angle < 270):
                 x = self.speed * (math.sin((math.radians(self.angle%90))))
                 #print("Opp")
             elif (90 < self.angle < 180) or (270 < self.angle < 360):
                 x = self.speed * (math.cos(math.radians(self.angle%90)))
             if self.angle > 180:
-                print
                 x = -x
             return round(x,2)
         
@@ -115,7 +125,7 @@ class Velocity:
     def set_angle(self, angle):
         if angle < 0:
             angle = 360-angle
-        if angle > 360:
+        if angle >= 360:
             angle -= 360
         self.angle = angle
         self.update_components(message="Changed angle")
@@ -135,9 +145,13 @@ class Cube(Game_Object, Collision_Rectangle):
     def frame_update(self, objects = [], frame_rate = 30):
         self.position_update()
         collisions = self.collision_check(objects)
+        #print(collisions)
         if type(collisions[0]) != bool and self.can_bounce:
             #print(collisions[0])
-            self.bounce(collisions[0])
+            self.wall_bounce(collisions[0])
+        if type(collisions[1] != [] and self.can_bounce):
+            for collision in collisions[1]:
+                self.bounce(hit_object = collision[0], vertex = collision[1])
 
     def position_update(self,frame_rate = 30):
         ## TODO
@@ -149,7 +163,7 @@ class Cube(Game_Object, Collision_Rectangle):
         self.position["y"] = round(self.position["y"] + (self.velocity.y),2)
         
 
-    def bounce(self, collisions):
+    def wall_bounce(self, collisions):
         #print("BOUNCE!", collisions)
         #left right top bottom
         #T/F   T/F  T/F  T/F
@@ -210,18 +224,59 @@ class Cube(Game_Object, Collision_Rectangle):
             self.position_update()
             return
 
+
+    def bounce(self, hit_object, vertex):
+        if self.velocity.x == 0 or self.velocity.y == 0:
+            self.velocity.set_angle(self.velocity.angle+180)
+            self.position_update()
+            return
+        elif hit_object.velocity.x == 0 or hit_object.velocity.y == 0:
+            hit_object.velocity.set_angle(hit_object.velocity.angle)
+            hit_object.position_update()
+            return
+        else:
+            self_gradient = self.velocity.y / self.velocity.x
+            object_gradient = hit_object.velocity.y / hit_object.velocity.x
+            if (self.velocity.y / self.velocity.x)*(hit_object.velocity.y / hit_object.velocity.x) != 1:
+                intercept_angle = math.degrees(math.atan((object_gradient-self_gradient)/(1-(object_gradient*self_gradient))))
+            else:
+                intercept_angle = 90
+            #if intercept_angle < 0 and ((90 < self.velocity.angle < 180) or (270 < self.velocity.angle < 360)) and ((90 < hit_object.velocity.angle < 180) or (270 < hit_object.velocity.angle < 360)):
+            if self_gradient > object_gradient and (0 < self.velocity.angle < 180):
+                self.velocity.set_angle(self.velocity.angle + 180 - intercept_angle)
+                hit_object.velocity.set_angle(hit_object.velocity.angle - 180 + intercept_angle)
+                self.position_update()
+                return
+            if self_gradient > object_gradient and (180 < self.velocity.angle < 360):
+                self.velocity.set_angle(self.velocity.angle - 180 + intercept_angle)
+                hit_object.velocity.set_angle(hit_object.velocity.angle + 180 - intercept_angle)
+                self.position_update()
+                return
+            if self_gradient < object_gradient and (0 < self.velocity.angle < 180):
+                self.velocity.set_angle(self.velocity.angle - 180 + intercept_angle)
+                hit_object.velocity.set_angle(hit_object.velocity.angle + 180 - intercept_angle)
+                self.position_update()
+                return
+            if self_gradient < object_gradient and (180 < self.velocity.angle < 360):
+                self.velocity.set_angle(self.velocity.angle + 180 - intercept_angle)
+                hit_object.velocity.set_angle(hit_object.velocity.angle - 180 + intercept_angle)
+                self.position_update()
+                return
+
+        pass
+        
     def border_collision_check(self, o):
         left_collision = False
         right_collision = False
         top_collision = False
         bottom_collision = False
-        if self.vertices[0][0] <= 0:
+        if self.edges["left"]["x"] <= 0:
             left_collision = True
-        if self.vertices[3][0] >= o.width:
+        if self.edges["right"]["x"] >= o.width:
             right_collision = True
-        if self.vertices[0][1] <= 0:
+        if self.edges["top"]["y"] <= 0:
             top_collision = True
-        if self.vertices[3][1] >= o.height:
+        if self.edges["bottom"]["y"] >= o.height:
             bottom_collision = True
 
         #if there has been a collision return which sides collided
