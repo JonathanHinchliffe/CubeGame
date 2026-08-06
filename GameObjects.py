@@ -303,4 +303,28 @@ class Border(Collision_Rectangle):
     def collision_check(self):
         return super().collision_check()
 
+class Player(Game_Object):
+
+    def __init__(self, game_object = None):
+        self.game_object = game_object
+        pass
+
+    def render(self, canvas):
+        if self.game_object != None:
+            self.game_object.render(canvas)
+
+    def position_update(self, event, objects=[], frame_rate=30):
+        if self.game_object != None:
+            self.game_object.position["y"] = event.y
+            self.game_object.position["x"] = event.x
+            collisions = self.game_object.collision_check(objects)
+            if collisions != (False, []):
+                #player has hit something
+                #game over
+                print("Player Hit!")
+                self.game_object.colour="green"
+
+    def frame_update(self):
+        pass
+
 

@@ -15,7 +15,7 @@ canvas.pack()
 
 border = GameObjects.Border(canvasWidth, canvasHeight)
 #cubes = [cube1,cube2,cube3,cube4]
-colours = ["red", "blue", "green", "yellow", "pink", "brown", "grey"]
+colours = ["red", "yellow", "pink", "brown", "grey"]
 i = 0
 objects = [border]
 cubes = []
@@ -24,6 +24,8 @@ for i in range(30):
     cubes.append(GameObjects.Cube(size=random.randint(10,40), position=dict(x=random.randint(100,canvasWidth),y=random.randint(50,canvasHeight)), velocity=vel, colour=colours[i%len(colours)]))
     objects.append(cubes[i])
 
+player = GameObjects.Player(GameObjects.Cube(size=40, position=dict(x = canvasWidth/2, y = canvasHeight/2), colour="blue"))
+
 def updateCanvas():
     start = time.time()
     canvas.delete("all")
@@ -31,11 +33,13 @@ def updateCanvas():
         cube.render(canvas)
         cube.frame_update(objects = objects)
     #print("render complete")
+    player.render(canvas)
     end = time.time()
     times.append(end-start)
     print(sum(times)/len(times))
     window.after(100, updateCanvas)
 
 
+window.bind("<Motion>",lambda event, objects=objects: player.position_update(event=event,objects=objects))
 updateCanvas()
 mainloop()
