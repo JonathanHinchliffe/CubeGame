@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import math
+import threading
 
 
 class Game_Object(ABC):
@@ -346,6 +347,19 @@ class Item(Cube):
     def on_player_collision(self):
         pass
 
+class Timed_Effect(ABC):
+
+    #length in milliseconds
+    effect_length: int
+
+    @abstractmethod
+    def start_effect(self):
+        pass
+
+    @abstractmethod
+    def end_effect(self):
+        pass
+
 class Change_Colour_Powerup(Item):
 
     def __init__(self, size, position=dict(x=0, y=0), velocity=Velocity(0, 0), colour="pink"):
@@ -356,3 +370,25 @@ class Change_Colour_Powerup(Item):
         player.game_object.colour = self.colour
         print("Player Hit Power up")
         pass
+
+class Temp_Change_Colour_Powerup(Change_Colour_Powerup, Timed_Effect):
+
+    def __init__(self, effect_length:int,size = 40, position=dict(x=0, y=0), velocity=Velocity(0, 0), colour="pink"):
+        super().__init__(size, position, velocity, colour)
+        self.effect_length = effect_length
+
+    def on_player_collision(self, player):
+        self.start_effect(player)
+
+    def start_effect(self, player):
+        print("START EFFECT")
+        self.player_original_colour = player.game_object.colour
+        player.game_object.colour = self.colour
+        timer = threading.Timer((self.effect_length/1000), lambda self=self, player=player: self.end_effect(player))
+        timer.start()
+
+
+    def end_effect(self, player):
+        print("END EFFECT")
+        player.game_object.colour = self.player_original_colour
+
