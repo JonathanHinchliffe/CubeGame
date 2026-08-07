@@ -4,6 +4,8 @@ import math
 
 class Game_Object(ABC):
     
+    remove = False
+
     @abstractmethod
     def frame_update(self):
         pass
@@ -11,6 +13,7 @@ class Game_Object(ABC):
     @abstractmethod
     def render(self):
         pass
+
 
 class Collision_Model(ABC):
 
@@ -71,6 +74,8 @@ class Velocity:
         #print(speed, angle)
         if self.speed != 0:
             self.update_components(message="Speed not 0 on init")
+        else:
+            self.update_components(message="Stationary")
         
     def calculate_x(self):
         if self.speed == 0:
@@ -321,10 +326,33 @@ class Player(Game_Object):
             if collisions != (False, []):
                 #player has hit something
                 #game over
-                print("Player Hit!")
+                #print("Player Hit!")
                 self.game_object.colour="green"
+                for collision in collisions[1]:
+                    collision_object = collision[0]
+                    if issubclass(type(collision_object), Item):
+                        collision_object.on_player_collision(self)
+                    collision_object.remove = True
 
     def frame_update(self):
         pass
 
 
+class Item(Cube):
+
+    def __init__(self, size, position=dict(x=0, y=0), velocity=Velocity(0, 0), colour="grey"):
+        super().__init__(size, position, velocity, colour)
+
+    def on_player_collision(self):
+        pass
+
+class Change_Colour_Powerup(Item):
+
+    def __init__(self, size, position=dict(x=0, y=0), velocity=Velocity(0, 0), colour="pink"):
+        super().__init__(size, position, velocity, colour)
+
+    def on_player_collision(self, player):
+        self.remove = True
+        player.game_object.colour = self.colour
+        print("Player Hit Power up")
+        pass

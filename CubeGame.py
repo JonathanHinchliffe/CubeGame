@@ -1,5 +1,6 @@
 from tkinter import *
 import random
+from turtle import pos
 import GameObjects
 import time
 
@@ -25,18 +26,27 @@ for i in range(30):
     objects.append(cubes[i])
 
 player = GameObjects.Player(GameObjects.Cube(size=40, position=dict(x = canvasWidth/2, y = canvasHeight/2), colour="blue"))
+power_up = GameObjects.Change_Colour_Powerup(size = 40, position = dict(x = 200, y = 200))
+objects.append(power_up)
+cubes.append(power_up)
+print(type(cubes[-1]))
 
 def updateCanvas():
     start = time.time()
     canvas.delete("all")
     for cube in cubes:
-        cube.render(canvas)
-        cube.frame_update(objects = objects)
+        if cube.remove:
+            cubes.remove(cube)
+            objects.remove(cube)
+            del cube
+        else:
+            cube.render(canvas)
+            cube.frame_update(objects = objects)
     #print("render complete")
     player.render(canvas)
     end = time.time()
     times.append(end-start)
-    print(sum(times)/len(times))
+    #print(sum(times)/len(times))
     window.after(100, updateCanvas)
 
 
