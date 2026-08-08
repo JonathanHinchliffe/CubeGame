@@ -25,15 +25,20 @@ for i in range(30):
     cubes.append(GameObjects.Cube(size=random.randint(10,40), position=dict(x=random.randint(100,canvasWidth),y=random.randint(50,canvasHeight)), velocity=vel, colour=colours[i%len(colours)]))
     objects.append(cubes[i])
 
+score = GameObjects.Score()
+increase = GameObjects.Score_Increase(score)
+
 player = GameObjects.Player(GameObjects.Cube(size=40, position=dict(x = canvasWidth/2, y = canvasHeight/2), colour="blue"))
-power_up = GameObjects.Temp_Change_Colour_Powerup(effect_length=10000, position = dict(x = 200, y = 200))
+power_up = GameObjects.Score_Increase_Powerup(score, effect_length=5000, position = dict(x = 200, y = 200))
 objects.append(power_up)
 cubes.append(power_up)
 print(type(cubes[-1]))
 
+
 def updateCanvas():
-    start = time.time()
     canvas.delete("all")
+    score.frame_update()
+    print(score.score)
     for cube in cubes:
         if cube.remove:
             cubes.remove(cube)
@@ -44,8 +49,6 @@ def updateCanvas():
             cube.frame_update(objects = objects)
     #print("render complete")
     player.render(canvas)
-    end = time.time()
-    times.append(end-start)
     #print(sum(times)/len(times))
     window.after(100, updateCanvas)
 
