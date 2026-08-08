@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
 import math
+import threading
 
 
 class Game_Object(ABC):
     
+    remove = False
+
     @abstractmethod
     def frame_update(self):
         pass
@@ -11,6 +14,7 @@ class Game_Object(ABC):
     @abstractmethod
     def render(self):
         pass
+
 
 class Collision_Model(ABC):
 
@@ -71,6 +75,8 @@ class Velocity:
         #print(speed, angle)
         if self.speed != 0:
             self.update_components(message="Speed not 0 on init")
+        else:
+            self.update_components(message="Stationary")
         
     def calculate_x(self):
         if self.speed == 0:
@@ -305,6 +311,8 @@ class Border(Collision_Rectangle):
 
 class Player(Game_Object):
 
+    remove_enemy_on_collision = False
+
     def __init__(self, game_object = None):
         self.game_object = game_object
         pass
@@ -321,10 +329,153 @@ class Player(Game_Object):
             if collisions != (False, []):
                 #player has hit something
                 #game over
-                print("Player Hit!")
-                self.game_object.colour="green"
+                #print("Player Hit!")
+                #self.game_object.colour="green"
+                for collision in collisions[1]:
+                    collision_object = collision[0]
+                    if issubclass(type(collision_object), Item):
+                        collision_object.on_player_collision(self)
+                        collision_object.remove = True
+                    if self.remove_enemy_on_collision:
+                        collision_object.remove = True
 
     def frame_update(self):
         pass
 
 
+class Item(Cube):
+
+    def __init__(self, size, position=dict(x=0, y=0), velocity=Velocity(0, 0), colour="grey"):
+        super().__init__(size, position, velocity, colour)
+
+    def on_player_collision(self):
+        pass
+
+class Timed_Effect(ABC):
+
+    #length in milliseconds
+    effect_length: int
+    effect_active = False
+
+    @abstractmethod
+    def start_effect(self):
+        pass
+
+    @abstractmethod
+    def end_effect(self):
+        pass
+
+class Change_Colour_Powerup(Item):
+
+    def __init__(self, size, position=dict(x=0, y=0), velocity=Velocity(0, 0), colour="pink"):
+        super().__init__(size, position, velocity, colour)
+
+    def on_player_collision(self, player):
+        self.remove = True
+        player.game_object.colour = self.colour
+        print("Player Hit Power up")
+        pass
+
+class Temp_Change_Colour_Powerup(Change_Colour_Powerup, Timed_Effect):
+
+    def __init__(self, effect_length:int,size = 40, position=dict(x=0, y=0), velocity=Velocity(0, 0), colour="pink"):
+        super().__init__(size, position, velocity, colour)
+        self.effect_length = effect_length
+
+    def on_player_collision(self, player):
+        self.start_effect(player)
+
+    def start_effect(self, player):
+        if self.effect_active == False:
+            print("START EFFECT")
+            self.player_original_colour = player.game_object.colour
+            self.effect_active = True
+            player.game_object.colour = self.colour
+            timer = threading.Timer((self.effect_length/1000), lambda self=self, player=player: self.end_effect(player))
+            timer.start()
+
+
+    def end_effect(self, player):
+        self.effect_active = False
+        print("END EFFECT")
+        player.game_object.colour = self.player_original_colour
+
+class Eat_Enemy_Powerup(Item, Timed_Effect):
+
+    def __init__(self, effect_length:int, size = 40, position=dict(x=0, y=0), velocity=Velocity(0, 0), colour="purple"):
+        super().__init__(size, position, velocity, colour)
+        self.effect_length = effect_length
+
+    def on_player_collision(self, player):
+        self.start_effect(player)
+
+    def start_effect(self, player):
+        if self.effect_active == False:
+            print("START EFFECT")
+            player.remove_enemy_on_collision = True
+            self.effect_active == True
+            timer = threading.Timer((self.effect_length/1000), lambda self=self, player=player: self.end_effect(player))
+            timer.start()
+
+    def end_effect(self, player):
+        self.effect_active = False
+        print("END EFFECT")
+        player.remove_enemy_on_collision = False
+
+
+class Score_Increase_Powerup(Item, Timed_Effect):
+
+    def __init__(self, score, effect_length:int, size = 40, position=dict(x=0, y=0), velocity=Velocity(0, 0), colour="cyan"):
+        super().__init__(size, position, velocity, colour)
+        self.effect_length = effect_length
+        self.score = score
+
+    def on_player_collision(self, player):
+        self.start_effect(self.score)
+
+    def start_effect(self, score):
+        if self.effect_active == False:
+            print("EFFECT START")
+            self.effect_active = True
+            score.score_increase = score.score_increase *2
+            timer = threading.Timer((self.effect_length/1000), lambda self=self, score=score: self.end_effect(score))
+            timer.start()
+
+    def end_effect(self, score):
+        print("EFFECT END")
+        self.effect_active = False
+        if score.score_increase %2:
+            score.score_increase = (score.score_increase//2)+1
+        else:
+            score.score_increase = score.score_increase//2
+
+
+class Score(Game_Object):
+
+    score = 0
+
+    def __init__(self, score_increase = 1):
+        self.score_increase = score_increase
+
+    def frame_update(self):
+        self.score += self.score_increase
+
+    def render(self):
+        pass
+
+class Score_Increase(Timed_Effect):
+
+    def __init__(self, score, increase = 1, effect_length = 5000):
+        self.effect_length = effect_length
+        self.increase = increase
+        self.start_effect(score)
+
+    def start_effect(self, score):
+        print("EFFECT START")
+        score.score_increase += self.increase
+        timer = threading.Timer((self.effect_length/1000), lambda self=self, score=score: self.end_effect(score))
+        timer.start()
+
+    def end_effect(self, score):
+        print("EFFECT END")
+        Score_Increase(score, increase=self.increase+1)
