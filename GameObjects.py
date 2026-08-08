@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
+from ast import Tuple
+from tkinter import *
 import math
 import threading
+
 
 
 class Game_Object(ABC):
@@ -468,7 +471,7 @@ class Score_Increase(Timed_Effect):
     def __init__(self, score, increase = 1, effect_length = 5000):
         self.effect_length = effect_length
         self.increase = increase
-        self.start_effect(score)
+        #self.start_effect(score)
 
     def start_effect(self, score):
         print("EFFECT START")
@@ -479,3 +482,19 @@ class Score_Increase(Timed_Effect):
     def end_effect(self, score):
         print("EFFECT END")
         Score_Increase(score, increase=self.increase+1)
+
+class Game:
+
+    def __init__(self, canvas:Canvas, effects:tuple[Timed_Effect,...], enemy_types:tuple[Game_Object,...], powerups:tuple[Item,...], player = Player(Cube(size=40, position=dict(x=700,y=400),colour="blue")), border=Border(1280,720), max_enemies = 20, frame_rate = 30):
+        self.canvas = canvas
+        self.effects = effects
+        self.enemy_types = enemy_types
+        self.powerups = powerups
+        self.max_enemies = max_enemies
+        self.player = player
+        self.border = border
+        self.objects = [self.player, self.border]
+
+    def start_game(self):
+        pass
+

@@ -53,6 +53,9 @@ def updateCanvas():
     window.after(100, updateCanvas)
 
 
+effects = (GameObjects.Score_Increase)
+game = GameObjects.Game(canvas, effects=effects)
+
 window.bind("<Motion>",lambda event, objects=objects: player.position_update(event=event,objects=objects))
 updateCanvas()
 mainloop()
