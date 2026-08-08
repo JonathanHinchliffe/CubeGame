@@ -32,7 +32,7 @@ player = GameObjects.Player(GameObjects.Cube(size=40, position=dict(x = canvasWi
 power_up = GameObjects.Score_Increase_Powerup(score, effect_length=5000, position = dict(x = 200, y = 200))
 objects.append(power_up)
 cubes.append(power_up)
-print(type(cubes[-1]))
+print(player.__class__.__name__)
 
 
 def updateCanvas():
@@ -54,8 +54,11 @@ def updateCanvas():
 
 
 effects = (GameObjects.Score_Increase)
-game = GameObjects.Game(canvas, effects=effects)
+game = GameObjects.Game(canvas, effects=effects, enemy_types=(GameObjects.Cube))
 
-window.bind("<Motion>",lambda event, objects=objects: player.position_update(event=event,objects=objects))
-updateCanvas()
+window.bind("<Motion>",lambda event, objects=objects: game.player.position_update(event=event,objects=objects))
+#updateCanvas()
+#mainloop()
+window.update()
+game.start_game()
 mainloop()

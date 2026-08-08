@@ -3,7 +3,7 @@ from ast import Tuple
 from tkinter import *
 import math
 import threading
-
+import random
 
 
 class Game_Object(ABC):
@@ -57,7 +57,15 @@ class Collision_Rectangle(Collision_Model):
             if isinstance(o, Border):
                 border_collisions = self.border_collision_check(o)
                     #there has been a collision
+            elif isinstance(o, Player):
+                for key, value in o.game_object.vertices.items():
+                    if (self.edges["top"]["min_x"] <= value[0] <= self.edges["top"]["max_x"]) and (self.edges["left"]["min_y"]<= value[1] <= self.edges["left"]["max_y"]):
+                        #vertex is within this cube
+                        collisions.append([o, key])
+            elif o == self:
+                continue
             else:
+                ## PLAYER NEEDS o.game_object.vertices
                 for key, value in o.vertices.items():
                     if (self.edges["top"]["min_x"] <= value[0] <= self.edges["top"]["max_x"]) and (self.edges["left"]["min_y"]<= value[1] <= self.edges["left"]["max_y"]):
                         #vertex is within this cube
@@ -160,7 +168,12 @@ class Cube(Game_Object, Collision_Rectangle):
             self.wall_bounce(collisions[0])
         if type(collisions[1] != [] and self.can_bounce):
             for collision in collisions[1]:
-                self.bounce(hit_object = collision[0], vertex = collision[1])
+                if isinstance(collision[0], Player) == False:
+                    self.bounce(hit_object = collision[0], vertex = collision[1])
+                else:
+                    collision[0].hit = True
+
+
 
     def position_update(self,frame_rate = 30):
         ## TODO
@@ -318,7 +331,8 @@ class Player(Game_Object):
 
     def __init__(self, game_object = None):
         self.game_object = game_object
-        pass
+        self.game_object.can_bounce = False
+        self.hit = False
 
     def render(self, canvas):
         if self.game_object != None:
@@ -334,6 +348,7 @@ class Player(Game_Object):
                 #game over
                 #print("Player Hit!")
                 #self.game_object.colour="green"
+                self.hit == True
                 for collision in collisions[1]:
                     collision_object = collision[0]
                     if issubclass(type(collision_object), Item):
@@ -485,7 +500,7 @@ class Score_Increase(Timed_Effect):
 
 class Game:
 
-    def __init__(self, canvas:Canvas, effects:tuple[Timed_Effect,...], enemy_types:tuple[Game_Object,...], powerups:tuple[Item,...], player = Player(Cube(size=40, position=dict(x=700,y=400),colour="blue")), border=Border(1280,720), max_enemies = 20, frame_rate = 30):
+    def __init__(self, canvas:Canvas, effects:tuple[Timed_Effect,...], enemy_types:tuple[Game_Object,...], powerups:tuple[Item,...] = (), player = Player(Cube(size=40, position=dict(x=700,y=400),colour="blue")), border=Border(1280,720), max_enemies = 20, frame_rate = 10):
         self.canvas = canvas
         self.effects = effects
         self.enemy_types = enemy_types
@@ -494,7 +509,33 @@ class Game:
         self.player = player
         self.border = border
         self.objects = [self.player, self.border]
+        self.score = Score()
+        self.frame_rate = frame_rate
 
     def start_game(self):
+        print("START GAME")
+        self.frame_update()
+
+    def frame_update(self):
+        self.canvas.delete("all")
+        if len(self.objects) < self.max_enemies:
+            vel = Velocity(angle=random.randint(0,359), speed=random.randint(5,30))
+            self.objects.append(Cube(size=random.randint(10,40), position=dict(x=random.randint(100,self.canvas.winfo_width()-4),y=random.randint(50,self.canvas.winfo_height()-4)), velocity=vel))
+        for obj in self.objects:
+            if obj.__class__.__name__ == "Border":
+                pass
+            elif obj.__class__.__name__ == "Player":
+                obj.render(self.canvas)
+            elif obj.remove:
+                self.objects.remove(obj)
+            else:
+                obj.frame_update(objects=self.objects)
+                obj.render(self.canvas)
+        if self.player.hit == False:
+            self.canvas.master.after((1000//self.frame_rate), self.frame_update)
+
+    def canvas_update(self):
         pass
 
+    def end_game(self):
+        pass
