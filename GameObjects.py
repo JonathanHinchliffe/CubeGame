@@ -5,6 +5,7 @@ import math
 import threading
 import random
 import time
+import datetime
 
 
 class Game_Object(ABC):
@@ -381,8 +382,10 @@ class Player(Game_Object):
                     if issubclass(type(collision_object), Item):
                         collision_object.on_player_collision(self)
                         collision_object.remove = True
+                        self.hit = False
                     if self.remove_enemy_on_collision:
                         collision_object.remove = True
+                        self.hit = False
 
     def frame_update(self):
         pass
@@ -608,7 +611,8 @@ class Game:
         pass
 
     def end_game(self):
+        date = datetime.datetime.now()
         time_survived = time.time() - self.game_timer
         file = open("game-results.csv", "a")
-        file.write(str(time_survived) + ", " + str(self.score.score) + "\n")
+        file.write(str(date) + ", " + str(time_survived) + ", " + str(self.score.score) + "\n")
         file.close()
