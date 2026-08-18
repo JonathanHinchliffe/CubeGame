@@ -6,6 +6,8 @@ import time
 
 global times
 
+# Version 2
+
 times = []
 window = Tk()
 canvasWidth = 1280

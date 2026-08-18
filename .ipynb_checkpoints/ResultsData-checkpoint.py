@@ -4,7 +4,7 @@ from matplotlib.ticker import MaxNLocator
 import requests
 import seaborn as sns
 
-df = pd.read_csv("game-results.csv", index_col=0, parse_dates=True, header=None, names=["Game Version", "Date", "Time Survived", "Score"])
+df = pd.read_csv("game-results.csv", index_col=0, parse_dates=True, header=None, names=["Date", "Time Survived", "Score"])
 
 time_bins = [0, 10, 30, 60, 90, float("inf")]
 time_labels = ["< 10 seconds", "10–29 seconds", "30–59 seconds", "60-89 seconds", "90+ seconds"]

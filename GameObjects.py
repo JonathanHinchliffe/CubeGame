@@ -6,6 +6,7 @@ import threading
 import random
 import time
 import datetime
+import os
 
 
 class Game_Object(ABC):
@@ -611,8 +612,10 @@ class Game:
         pass
 
     def end_game(self):
+        game_version = os.path.getmtime("CubeGame.py")
+        game_version = datetime.datetime.fromtimestamp(game_version)
         date = datetime.datetime.now()
         time_survived = time.time() - self.game_timer
         file = open("game-results.csv", "a")
-        file.write(str(date) + ", " + str(time_survived) + ", " + str(self.score.score) + "\n")
+        file.write(str(game_version) + ", " +  str(date) + ", " + str(time_survived) + ", " + str(self.score.score) + "\n")
         file.close()
