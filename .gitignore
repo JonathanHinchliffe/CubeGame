@@ -366,8 +366,8 @@ FodyWeavers.xsd
 .ipynb_checkpoints/
 
 #Data folder
-.png
+*.png
 !Data/Example_Bar_Chart.png
 !Data/Example_ScoreTime.png
-.xlsx
+*.xlsx
 !Data/Example_Game_Results.xlsx
