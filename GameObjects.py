@@ -395,10 +395,9 @@ class Player(Game_Object):
 class Item(Cube):
 
     def __init__(self, size = 40, position=dict(x=0, y=0), velocity=Velocity(0, 0), colour="grey"):
-        print(position)
-
+        #print(position)
         super().__init__(size = size, position = position, velocity = velocity, colour=colour)
-
+        self.info = ["Start Time", "On Player Collision Time", "End Effect Time"]
     def on_player_collision(self):
         pass
 
@@ -432,8 +431,12 @@ class Temp_Change_Colour_Powerup(Change_Colour_Powerup, Timed_Effect):
     def __init__(self, info, effect_length = 5000,size = 40, position=dict(x=0, y=0), velocity=Velocity(0, 0), colour="pink"):
         super().__init__(size = size, position = position, velocity = velocity, colour = colour)
         self.effect_length = effect_length
+        self.game_timer = info["game_timer"]
+        self.info[0] = time.time() - self.game_timer
+        info["powerup_data"][self.__class__.__name__].append(self.info)
 
     def on_player_collision(self, player):
+        self.info[1] = time.time() - self.game_timer
         self.start_effect(player)
 
     def start_effect(self, player):
@@ -448,6 +451,7 @@ class Temp_Change_Colour_Powerup(Change_Colour_Powerup, Timed_Effect):
 
     def end_effect(self, player):
         self.effect_active = False
+        self.info[2] = time.time() - self.game_timer
         print("END EFFECT")
         player.game_object.colour = self.player_original_colour
 
@@ -456,8 +460,12 @@ class Eat_Enemy_Powerup(Item, Timed_Effect):
     def __init__(self, info, effect_length = 5000, size = 40, position=dict(x=0, y=0), velocity=Velocity(0, 0), colour="purple"):
         super().__init__(size = size, position = position, velocity = velocity, colour = colour)
         self.effect_length = effect_length
+        self.game_timer = info["game_timer"]
+        self.info[0] = time.time() - self.game_timer
+        info["powerup_data"][self.__class__.__name__].append(self.info)
 
     def on_player_collision(self, player):
+        self.info[1] = time.time() - self.game_timer
         self.start_effect(player)
 
     def start_effect(self, player):
@@ -470,6 +478,7 @@ class Eat_Enemy_Powerup(Item, Timed_Effect):
 
     def end_effect(self, player):
         self.effect_active = False
+        self.info[2] = time.time() - self.game_timer
         print("END EFFECT")
         player.remove_enemy_on_collision = False
 
@@ -479,10 +488,13 @@ class Score_Increase_Powerup(Item, Timed_Effect):
     def __init__(self, info, effect_length = 5000, size = 40, position=dict(x=0, y=0), velocity=Velocity(0, 0), colour="cyan"):
         super().__init__(size = size, position = position, velocity = velocity, colour = colour)
         self.effect_length = effect_length
-        print(info)
         self.score = info["score"]
+        self.game_timer = info["game_timer"]
+        self.info[0] = time.time() - self.game_timer
+        info["powerup_data"][self.__class__.__name__].append(self.info)
 
     def on_player_collision(self, player):
+        self.info[1] = time.time() - self.game_timer
         self.start_effect(self.score)
 
     def start_effect(self, score):
@@ -495,6 +507,7 @@ class Score_Increase_Powerup(Item, Timed_Effect):
 
     def end_effect(self, score):
         print("EFFECT END")
+        self.info[2] = time.time() - self.game_timer
         self.effect_active = False
         if score.score_increase %2:
             score.score_increase = (score.score_increase//2)+1
@@ -544,7 +557,7 @@ class Powerup_Spawner(Timed_Effect):
 
     def end_effect(self, info):
         powerup = info["powerups"][random.randint(0,len(info["powerups"])-1)]
-        print(info["objects"][1])
+        #print(info["objects"][1])
         new_powerup = powerup(info, position=dict(x=random.randint(25,info["objects"][1].width-25),y=random.randint(25,info["objects"][1].height-25)))
         i = 0
         while i < 20:
@@ -569,13 +582,16 @@ class Game:
         self.objects = [self.player, self.border]
         self.score = Score()
         self.frame_rate = frame_rate
+        self.powerup_data = dict()
+        for p in self.powerups:
+            self.powerup_data[p.__name__] = []
 
     def start_game(self):
         self.game_timer = time.time()
         print("START GAME")
         self.frame_update()
         for effect in self.effects:
-            effect.start_effect(info = dict(score = self.score, objects = self.objects, powerups=self.powerups))
+            effect.start_effect(info = dict(score = self.score, objects = self.objects, powerups=self.powerups, powerup_data=self.powerup_data, game_timer = self.game_timer))
 
     def frame_update(self):
         self.canvas.delete("all")
@@ -616,6 +632,29 @@ class Game:
         game_version = datetime.datetime.fromtimestamp(game_version)
         date = datetime.datetime.now()
         time_survived = time.time() - self.game_timer
-        file = open("game-results.csv", "a")
-        file.write(str(game_version) + ", " +  str(date) + ", " + str(time_survived) + ", " + str(self.score.score) + "\n")
+        file = open("Data/game-results.csv", "a")
+        file.write(str(game_version) + "," +  str(date) + "," + str(time_survived) + "," + str(self.score.score) + "\n")
         file.close()
+        self.save_powerup_data(game_version, date)
+
+    def save_powerup_data(self ,game_version,  date):
+        file = open("Data/powerup-data.csv", "a")
+        for key in self.powerup_data.keys():
+            if self.powerup_data[key] != []:
+                for item in self.powerup_data[key]:
+                    #what reach record should be
+                    #date, powerup_name, spawn_time, activated_time, end_time
+                    if item[0] == "Start Time":
+                        # This item is wrong don't save to csv
+                        continue
+                    file.write(f"{date},{key},{item[0]},")
+                    if item[1] == "On Player Collision Time":
+                        #Powerup was never activated
+                        file.write(",")
+                    else: 
+                        file.write(f"{item[1]},")
+                    if item[2] == "End Effect Time":
+                        #Powerup effect never ended
+                        file.write("\n")
+                    else:
+                        file.write(f"{item[2]}\n")
