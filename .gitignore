@@ -361,3 +361,13 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Jupyter temp folder
+.ipynb_checkpoints/
+
+#Data folder
+*.png
+!Data/Example_Bar_Chart.png
+!Data/Example_ScoreTime.png
+*.xlsx
+!Data/Example_Game_Results.xlsx
