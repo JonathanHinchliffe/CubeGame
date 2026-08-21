@@ -633,28 +633,5 @@ class Game:
         date = datetime.datetime.now()
         time_survived = time.time() - self.game_timer
         file = open("Data/game-results.csv", "a")
-        file.write(f"{game_version},{date},{time_survived},{self.score.score}\n")
+        file.write(str(game_version) + ", " +  str(date) + ", " + str(time_survived) + ", " + str(self.score.score) + "\n")
         file.close()
-        self.save_powerup_data(game_version, date)
-
-    def save_powerup_data(self ,game_version,  date):
-        file = open("Data/powerup-data.csv", "a")
-        for key in self.powerup_data.keys():
-            if self.powerup_data[key] != []:
-                for item in self.powerup_data[key]:
-                    #what reach record should be
-                    #date, powerup_name, spawn_time, activated_time, end_time
-                    if item[0] == "Start Time":
-                        # This item is wrong don't save to csv
-                        continue
-                    file.write(f"{date},{key},{item[0]},")
-                    if item[1] == "On Player Collision Time":
-                        #Powerup was never activated
-                        file.write(",")
-                    else: 
-                        file.write(f"{item[1]},")
-                    if item[2] == "End Effect Time":
-                        #Powerup effect never ended
-                        file.write("\n")
-                    else:
-                        file.write(f"{item[2]}\n")

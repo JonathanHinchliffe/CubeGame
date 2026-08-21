@@ -24,7 +24,6 @@
   <ItemGroup>
     <Compile Include="CubeGame.py" />
     <Compile Include="GameObjects.py" />
-    <Compile Include="ResultsData.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Data-Visualiser.ipynb" />
