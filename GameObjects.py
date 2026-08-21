@@ -657,4 +657,4 @@ class Game:
                         #Powerup effect never ended
                         file.write("\n")
                     else:
-                        file.write(f"{item[2]}\n")
+                        file.write(f"{item[2]}\n") 
