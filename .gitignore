@@ -371,6 +371,3 @@ FodyWeavers.xsd
 !Data/Example_ScoreTime.png
 *.xlsx
 !Data/Example_Game_Results.xlsx
-
-#Old Files
-ResultsDate.py
