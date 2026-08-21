@@ -633,7 +633,7 @@ class Game:
         date = datetime.datetime.now()
         time_survived = time.time() - self.game_timer
         file = open("Data/game-results.csv", "a")
-        file.write(str(game_version) + "," +  str(date) + "," + str(time_survived) + "," + str(self.score.score) + "\n")
+        file.write(f"{game_version},{date},{time_survived},{self.score.score}\n")
         file.close()
         self.save_powerup_data(game_version, date)
 
