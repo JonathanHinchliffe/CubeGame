@@ -1,8 +1,8 @@
 <Solution>
   <Folder Name="/Solution Items/">
     <File Path="Data-Visualiser.ipynb" />
+    <File Path="Data/game-results.csv" />
     <File Path="Data/powerup-data.csv" />
-    <File Path="game-results.csv" />
     <File Path="Powerup-Visualiser.ipynb" />
   </Folder>
   <Project Path="CubeGame.pyproj" Type="888888a0-9f3d-457c-b088-3a5042f75d52" Id="1612dee1-3240-422e-91e8-017b2c44b9fa">
