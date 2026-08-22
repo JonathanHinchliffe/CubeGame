@@ -6,7 +6,7 @@ import time
 
 global times
 
-# Version 4
+# Version 6
 
 times = []
 window = Tk()

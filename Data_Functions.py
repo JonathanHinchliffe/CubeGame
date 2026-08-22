@@ -62,7 +62,7 @@ def read_results(file_name="Data/game-results.csv", split_on_game_version = Fals
         return gr_df
 
 def read_powerup_data(file_name="Data/powerup-data.csv"):
-    powerup_df = pd.read_csv("Data/powerup-data.csv", 
+    powerup_df = pd.read_csv(file_name, 
                          parse_dates=["Date"], 
                          header=None, 
                          names=["Date","Powerup","Time Spawned","Time Activated","Time Effect Ended"], 
@@ -277,3 +277,30 @@ def split_game_version(df, gv=0):
         new_df = df[df["Game Version"].isin(gv)].copy()
 
         return new_df
+
+def read_game_end_date(file_name="Data/game-end-data.csv"):
+    ge_df = pd.read_csv(file_name,
+                        parse_dates=["Date"],
+                        header=None,
+                        names=["Date", "Collision Object","Time Object Spawned","Enemies Alive"],
+                        dtype={"Collision Object":"string", "Time Object Spawned":"float64","Enemies Alive":"int"})
+
+    ge_df = ge_df.replace(r"^\s*$", pd.NA, regex=True)
+
+    ge_df.set_index("Date", inplace=True)
+
+    ge_df = ge_df[ge_df.notna()]
+
+    ge_df = ge_df[ge_df.notna()]
+
+    ge_df.dropna(subset=["Collision Object","Enemies Alive"], inplace=True)
+
+    return ge_df
+
+def ge_gr_merge(ge_df,gr_df, keep_columns=None, drop_columns=None):
+    com_df = ge_df.merge(gr_df, left_index=True, right_index=True, how="inner")
+    if keep_columns !=None:
+        com_df = com_df[keep_columns]
+    if drop_columns != None:
+        com_df = com_df.drop(drop_columns)
+    return com_df

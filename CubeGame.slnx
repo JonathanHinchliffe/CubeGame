@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/Solution Items/">
     <File Path="Data-Visualiser.ipynb" />
+    <File Path="Data/game-end-data.csv" />
     <File Path="Data/game-results.csv" />
     <File Path="Data/powerup-data.csv" />
     <File Path="Powerup-Visualiser.ipynb" />
