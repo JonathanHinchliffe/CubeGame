@@ -40,7 +40,7 @@ def read_results(file_name="Data/game-results.csv", split_on_game_version = Fals
     time_group_labels = []
     i = 1
     while i <= len(time_group)-2:
-        time_group_labels.append(f"{time_group[i-1]} < {time_group[i]-1}")
+        time_group_labels.append(f"{time_group[i-1]} < {time_group[i]}")
         i += 1
     time_group_labels.append(f"> {time_group[i-1]}")
 

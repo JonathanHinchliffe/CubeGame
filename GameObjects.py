@@ -313,6 +313,7 @@ class Cube(Game_Object, Collision_Rectangle):
     def closest_object(self, objects) -> tuple:
         closest = None
         distance = 0
+        direction = None
         for obj in objects:
             if type(obj) == Player:
                 dx = obj.game_object.position["x"] - self.position["x"]
@@ -325,16 +326,24 @@ class Cube(Game_Object, Collision_Rectangle):
             else:
                 dx = obj.position["x"] - self.position["x"]
                 dy = obj.position["y"] - self.position["y"]
-            if dx < 0:
-                dx *= -1
             if dy < 0:
+                t_direction = "Up"
                 dy *= -1
+            else:
+                t_direction = "Down"
+            if dx < 0:
+                t_direction = t_direction + " Left"
+                dx *= -1
+            else:
+                t_direction = t_direction + " Right"
+            
 
             dist = math.sqrt((dx**2)+(dy**2))
             if dist > distance:
                 closest = obj
                 distance = dist
-        return (closest, distance)
+                direction = t_direction
+        return (closest, distance, direction)
 
     def render(self, canvas):
         canvas.create_rectangle(self.position["x"]-(self.size//2), self.position["y"]-(self.size//2), self.position["x"]+(self.size//2), self.position["y"]+(self.size//2), fill=self.colour)
@@ -561,7 +570,7 @@ class Powerup_Spawner(Timed_Effect):
         new_powerup = powerup(info, position=dict(x=random.randint(25,info["objects"][1].width-25),y=random.randint(25,info["objects"][1].height-25)))
         i = 0
         while i < 20:
-            if new_powerup.closest_object(info["objects"])[1] > 50:
+            if new_powerup.closest_object(info["objects"])[1] > 75:
                 i += 50
                 info["objects"].append(new_powerup)
                 new_powerup.position["x"] = random.randint(25,info["objects"][1].width-25)
@@ -619,9 +628,23 @@ class Game:
         while x < 20:
             vel = Velocity(angle=random.randint(0,359), speed=random.randint(5,30))
             new_enemy = Cube(size=random.randint(10,40), position=dict(x=random.randint(100,self.canvas.winfo_width()-4),y=random.randint(50,self.canvas.winfo_height()-4)), velocity=vel)
-            if new_enemy.closest_object(self.objects)[1] > 50:
+            to_player = new_enemy.closest_object(self.objects)
+            if to_player[1] > 200:
                 self.objects.append(new_enemy)
-                x + 50
+                x += 50
+            elif to_player[1] > 100:
+                #Player to right check
+                if (0 < new_enemy.velocity.angle < 180) and "Right" not in to_player[2]:
+                    x += 50
+                #Player to left check
+                if (180 < new_enemy.velocity.angle < 360) and "Left" not in to_player[2]:
+                    x += 50
+                #Player below check
+                if (90 < new_enemy.velocity.angle < 270) and "Down" not in to_player[2]:
+                    x += 50
+                #Player above check
+                if (new_enemy.velocity.angle < 90 or 270 < new_enemy.velocity.angle) and "Up" not in to_player[2]:
+                    x += 50
             x += 1
 
     def canvas_update(self):
@@ -634,4 +657,28 @@ class Game:
         time_survived = time.time() - self.game_timer
         file = open("Data/game-results.csv", "a")
         file.write(str(game_version) + ", " +  str(date) + ", " + str(time_survived) + ", " + str(self.score.score) + "\n")
+        file.write(f"{game_version},{date},{time_survived},{self.score.score}\n")
         file.close()
+        self.save_powerup_data(game_version, date)
+
+    def save_powerup_data(self ,game_version,  date):
+        file = open("Data/powerup-data.csv", "a")
+        for key in self.powerup_data.keys():
+            if self.powerup_data[key] != []:
+                for item in self.powerup_data[key]:
+                    #what reach record should be
+                    #date, powerup_name, spawn_time, activated_time, end_time
+                    if item[0] == "Start Time":
+                        # This item is wrong don't save to csv
+                        continue
+                    file.write(f"{date},{key},{item[0]},")
+                    if item[1] == "On Player Collision Time":
+                        #Powerup was never activated
+                        file.write(",")
+                    else: 
+                        file.write(f"{item[1]},")
+                    if item[2] == "End Effect Time":
+                        #Powerup effect never ended
+                        file.write("\n")
+                    else:
+                        file.write(f"{item[2]}\n") 
