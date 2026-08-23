@@ -389,10 +389,6 @@ class Player(Game_Object):
             
             if collisions != (False, []):
                 #player has hit something
-                #game over
-                #print("Player Hit!")
-                #self.game_object.colour="green"
-                #print(collisions[0])
                 self.hit = True
                 if collisions[0] != False:
                     self.collision_object = objects[0]
@@ -416,9 +412,9 @@ class Item(Cube):
     def __init__(self, size = 40, position=dict(x=0, y=0), velocity=Velocity(0, 0), colour="grey"):
         #print(position)
         super().__init__(size = size, position = position, velocity = velocity, colour=colour)
-        self.info = ["Start Time", "On Player Collision Time", "End Effect Time"]
+        self.info = ["Start Time", "On Player Collision Time", "End Effect Time", 0]
     def on_player_collision(self):
-        pass
+        self.info[3] += 1
 
 class Timed_Effect(ABC):
 
@@ -439,11 +435,11 @@ class Change_Colour_Powerup(Item):
     def __init__(self, size=40, position=dict(x=0, y=0), velocity=Velocity(0, 0), colour="pink"):
         super().__init__(size = size, position = position, velocity = velocity, colour = colour)
 
-    def on_player_collision(self, player):
-        self.remove = True
-        player.game_object.colour = self.colour
-        print("Player Hit Power up")
-        pass
+    def on_player_collision(self, player, from_parent=False):
+        super().on_player_collision()
+        if from_parent == False:
+            self.remove = True
+            player.game_object.colour = self.colour
 
 class Temp_Change_Colour_Powerup(Change_Colour_Powerup, Timed_Effect):
 
@@ -455,6 +451,7 @@ class Temp_Change_Colour_Powerup(Change_Colour_Powerup, Timed_Effect):
         info["powerup_data"][self.__class__.__name__].append(self.info)
 
     def on_player_collision(self, player):
+        super().on_player_collision(player, True)
         self.info[1] = time.time() - self.game_timer
         self.start_effect(player)
 
@@ -484,18 +481,20 @@ class Eat_Enemy_Powerup(Item, Timed_Effect):
         info["powerup_data"][self.__class__.__name__].append(self.info)
 
     def on_player_collision(self, player):
-        self.info[1] = time.time() - self.game_timer
-        self.start_effect(player)
+        super().on_player_collision()
+        if self.effect_active == False:
+            self.info[1] = time.time() - self.game_timer
+            self.start_effect(player)
 
     def start_effect(self, player):
-        if self.effect_active == False:
-            print("START EFFECT")
-            player.remove_enemy_on_collision = True
-            self.effect_active == True
-            timer = threading.Timer((self.effect_length/1000), lambda self=self, player=player: self.end_effect(player))
-            timer.start()
+        print("START EFFECT")
+        player.remove_enemy_on_collision = True
+        self.effect_active = True
+        timer = threading.Timer((self.effect_length/1000), lambda self=self, player=player: self.end_effect(player))
+        timer.start()
 
     def end_effect(self, player):
+        super().on_player_collision()
         self.effect_active = False
         self.info[2] = time.time() - self.game_timer
         print("END EFFECT")
@@ -513,6 +512,7 @@ class Score_Increase_Powerup(Item, Timed_Effect):
         info["powerup_data"][self.__class__.__name__].append(self.info)
 
     def on_player_collision(self, player):
+        super().on_player_collision()
         self.info[1] = time.time() - self.game_timer
         self.start_effect(self.score)
 
@@ -689,9 +689,13 @@ class Game:
                         file.write(f"{item[1]},")
                     if item[2] == "End Effect Time":
                         #Powerup effect never ended
+                        file.write(",")
+                    else:
+                        file.write(f"{item[2]},") 
+                    if item[3] == 0:
                         file.write("\n")
                     else:
-                        file.write(f"{item[2]}\n") 
+                        file.write(f"{item[3]}\n")
 
     def save_game_end_data(self, date):
         obj = self.player.collision_object

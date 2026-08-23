@@ -61,11 +61,11 @@ def read_results(file_name="Data/game-results.csv", split_on_game_version = Fals
     else:
         return gr_df
 
-def read_powerup_data(file_name="Data/powerup-data.csv"):
+def read_powerup_data(file_name="Data/powerup-data.csv", names=["Date","Powerup","Time Spawned","Time Activated","Time Effect Ended","Times Player Hit"]):
     powerup_df = pd.read_csv(file_name, 
                          parse_dates=["Date"], 
                          header=None, 
-                         names=["Date","Powerup","Time Spawned","Time Activated","Time Effect Ended"], 
+                         names=names, 
                          dtype={"Powerup":"string", "Time Spawned":"float64", "Time Activated":"float64","Time Effect Ended":"float64"})
 
     powerup_df = powerup_df.replace(r"^\s*$", pd.NA, regex=True)
