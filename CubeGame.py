@@ -6,7 +6,7 @@ import time
 
 global times
 
-# Version 2
+# Version 7
 
 times = []
 window = Tk()
@@ -20,8 +20,6 @@ powerups = (GameObjects.Eat_Enemy_Powerup, GameObjects.Score_Increase_Powerup, G
 game = GameObjects.Game(canvas, effects=effects, enemy_types=(GameObjects.Cube), powerups=powerups)
 
 window.bind("<Motion>",lambda event, objects=game.objects: game.player.position_update(event=event,objects=objects))
-#updateCanvas()
-#mainloop()
 window.update()
 game.start_game()
 mainloop()

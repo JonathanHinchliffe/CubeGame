@@ -23,6 +23,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="CubeGame.py" />
+    <Compile Include="Data_Functions.py" />
     <Compile Include="GameObjects.py" />
   </ItemGroup>
   <ItemGroup>

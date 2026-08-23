@@ -65,6 +65,7 @@ class Collision_Rectangle(Collision_Model):
                     if (self.edges["top"]["min_x"] <= value[0] <= self.edges["top"]["max_x"]) and (self.edges["left"]["min_y"]<= value[1] <= self.edges["left"]["max_y"]):
                         #vertex is within this cube
                         collisions.append([o, key])
+                        o.collision_object = self
             elif o == self:
                 continue
             else:
@@ -154,13 +155,15 @@ class Velocity:
 
 class Cube(Game_Object, Collision_Rectangle):
 
-    def __init__(self, size, position = dict(x = 0, y = 0), velocity = Velocity(0,0), colour="grey"):
+    def __init__(self, size, position = dict(x = 0, y = 0), velocity = Velocity(0,0), colour="grey", info=None):
         self.size = size #size in px
         super().__init__(size, size,position = position)
         self.position = position
         self.velocity = velocity
         self.colour = colour
         self.can_bounce = True
+        if info != None:
+            self.time_spawned = time.time() - info["game_timer"]
 
     def frame_update(self, objects = [], frame_rate = 30):
         self.position_update()
@@ -313,6 +316,7 @@ class Cube(Game_Object, Collision_Rectangle):
     def closest_object(self, objects) -> tuple:
         closest = None
         distance = 0
+        direction = None
         for obj in objects:
             if type(obj) == Player:
                 dx = obj.game_object.position["x"] - self.position["x"]
@@ -325,16 +329,24 @@ class Cube(Game_Object, Collision_Rectangle):
             else:
                 dx = obj.position["x"] - self.position["x"]
                 dy = obj.position["y"] - self.position["y"]
-            if dx < 0:
-                dx *= -1
             if dy < 0:
+                t_direction = "Up"
                 dy *= -1
+            else:
+                t_direction = "Down"
+            if dx < 0:
+                t_direction = t_direction + " Left"
+                dx *= -1
+            else:
+                t_direction = t_direction + " Right"
+            
 
             dist = math.sqrt((dx**2)+(dy**2))
             if dist > distance:
                 closest = obj
                 distance = dist
-        return (closest, distance)
+                direction = t_direction
+        return (closest, distance, direction)
 
     def render(self, canvas):
         canvas.create_rectangle(self.position["x"]-(self.size//2), self.position["y"]-(self.size//2), self.position["x"]+(self.size//2), self.position["y"]+(self.size//2), fill=self.colour)
@@ -371,21 +383,24 @@ class Player(Game_Object):
         if self.game_object != None:
             self.game_object.position["y"] = event.y
             self.game_object.position["x"] = event.x
+            objects = objects.copy()
+            objects.remove(self)
             collisions = self.game_object.collision_check(objects)
+            
             if collisions != (False, []):
                 #player has hit something
-                #game over
-                #print("Player Hit!")
-                #self.game_object.colour="green"
-                self.hit == True
+                self.hit = True
+                if collisions[0] != False:
+                    self.collision_object = objects[0]
+                    return
                 for collision in collisions[1]:
-                    collision_object = collision[0]
-                    if issubclass(type(collision_object), Item):
-                        collision_object.on_player_collision(self)
-                        collision_object.remove = True
+                    self.collision_object = collision[0]
+                    if issubclass(type(self.collision_object), Item):
+                        self.collision_object.on_player_collision(self)
+                        self.collision_object.remove = True
                         self.hit = False
                     if self.remove_enemy_on_collision:
-                        collision_object.remove = True
+                        self.collision_object.remove = True
                         self.hit = False
 
     def frame_update(self):
@@ -397,9 +412,9 @@ class Item(Cube):
     def __init__(self, size = 40, position=dict(x=0, y=0), velocity=Velocity(0, 0), colour="grey"):
         #print(position)
         super().__init__(size = size, position = position, velocity = velocity, colour=colour)
-        self.info = ["Start Time", "On Player Collision Time", "End Effect Time"]
+        self.info = ["Start Time", "On Player Collision Time", "End Effect Time", 0]
     def on_player_collision(self):
-        pass
+        self.info[3] += 1
 
 class Timed_Effect(ABC):
 
@@ -420,11 +435,11 @@ class Change_Colour_Powerup(Item):
     def __init__(self, size=40, position=dict(x=0, y=0), velocity=Velocity(0, 0), colour="pink"):
         super().__init__(size = size, position = position, velocity = velocity, colour = colour)
 
-    def on_player_collision(self, player):
-        self.remove = True
-        player.game_object.colour = self.colour
-        print("Player Hit Power up")
-        pass
+    def on_player_collision(self, player, from_parent=False):
+        super().on_player_collision()
+        if from_parent == False:
+            self.remove = True
+            player.game_object.colour = self.colour
 
 class Temp_Change_Colour_Powerup(Change_Colour_Powerup, Timed_Effect):
 
@@ -436,6 +451,7 @@ class Temp_Change_Colour_Powerup(Change_Colour_Powerup, Timed_Effect):
         info["powerup_data"][self.__class__.__name__].append(self.info)
 
     def on_player_collision(self, player):
+        super().on_player_collision(player, True)
         self.info[1] = time.time() - self.game_timer
         self.start_effect(player)
 
@@ -465,18 +481,20 @@ class Eat_Enemy_Powerup(Item, Timed_Effect):
         info["powerup_data"][self.__class__.__name__].append(self.info)
 
     def on_player_collision(self, player):
-        self.info[1] = time.time() - self.game_timer
-        self.start_effect(player)
+        super().on_player_collision()
+        if self.effect_active == False:
+            self.info[1] = time.time() - self.game_timer
+            self.start_effect(player)
 
     def start_effect(self, player):
-        if self.effect_active == False:
-            print("START EFFECT")
-            player.remove_enemy_on_collision = True
-            self.effect_active == True
-            timer = threading.Timer((self.effect_length/1000), lambda self=self, player=player: self.end_effect(player))
-            timer.start()
+        print("START EFFECT")
+        player.remove_enemy_on_collision = True
+        self.effect_active = True
+        timer = threading.Timer((self.effect_length/1000), lambda self=self, player=player: self.end_effect(player))
+        timer.start()
 
     def end_effect(self, player):
+        super().on_player_collision()
         self.effect_active = False
         self.info[2] = time.time() - self.game_timer
         print("END EFFECT")
@@ -494,6 +512,7 @@ class Score_Increase_Powerup(Item, Timed_Effect):
         info["powerup_data"][self.__class__.__name__].append(self.info)
 
     def on_player_collision(self, player):
+        super().on_player_collision()
         self.info[1] = time.time() - self.game_timer
         self.start_effect(self.score)
 
@@ -561,7 +580,7 @@ class Powerup_Spawner(Timed_Effect):
         new_powerup = powerup(info, position=dict(x=random.randint(25,info["objects"][1].width-25),y=random.randint(25,info["objects"][1].height-25)))
         i = 0
         while i < 20:
-            if new_powerup.closest_object(info["objects"])[1] > 50:
+            if new_powerup.closest_object(info["objects"])[1] > 75:
                 i += 50
                 info["objects"].append(new_powerup)
                 new_powerup.position["x"] = random.randint(25,info["objects"][1].width-25)
@@ -595,7 +614,7 @@ class Game:
 
     def frame_update(self):
         self.canvas.delete("all")
-        if len(self.objects) < self.max_enemies:
+        if len(self.objects) < self.max_enemies+2:
             self.spawn_enemy()
             
         for obj in self.objects:
@@ -618,10 +637,24 @@ class Game:
         x = 0
         while x < 20:
             vel = Velocity(angle=random.randint(0,359), speed=random.randint(5,30))
-            new_enemy = Cube(size=random.randint(10,40), position=dict(x=random.randint(100,self.canvas.winfo_width()-4),y=random.randint(50,self.canvas.winfo_height()-4)), velocity=vel)
-            if new_enemy.closest_object(self.objects)[1] > 50:
+            new_enemy = Cube(size=random.randint(10,40), position=dict(x=random.randint(100,self.canvas.winfo_width()-4),y=random.randint(50,self.canvas.winfo_height()-4)), velocity=vel, info=dict(game_timer = self.game_timer))
+            to_player = new_enemy.closest_object(self.objects)
+            if to_player[1] > 200:
                 self.objects.append(new_enemy)
-                x + 50
+                x += 50
+            elif to_player[1] > 100:
+                #Player to right check
+                if (0 < new_enemy.velocity.angle < 180) and "Right" not in to_player[2]:
+                    x += 50
+                #Player to left check
+                if (180 < new_enemy.velocity.angle < 360) and "Left" not in to_player[2]:
+                    x += 50
+                #Player below check
+                if (90 < new_enemy.velocity.angle < 270) and "Down" not in to_player[2]:
+                    x += 50
+                #Player above check
+                if (new_enemy.velocity.angle < 90 or 270 < new_enemy.velocity.angle) and "Up" not in to_player[2]:
+                    x += 50
             x += 1
 
     def canvas_update(self):
@@ -633,5 +666,44 @@ class Game:
         date = datetime.datetime.now()
         time_survived = time.time() - self.game_timer
         file = open("Data/game-results.csv", "a")
-        file.write(str(game_version) + ", " +  str(date) + ", " + str(time_survived) + ", " + str(self.score.score) + "\n")
+        file.write(f"{game_version},{date},{time_survived},{self.score.score}\n")
+        file.close()
+        self.save_powerup_data(date)
+        self.save_game_end_data(date)
+
+    def save_powerup_data(self,  date):
+        file = open("Data/powerup-data.csv", "a")
+        for key in self.powerup_data.keys():
+            if self.powerup_data[key] != []:
+                for item in self.powerup_data[key]:
+                    #what reach record should be
+                    #date, powerup_name, spawn_time, activated_time, end_time
+                    if item[0] == "Start Time":
+                        # This item is wrong don't save to csv
+                        continue
+                    file.write(f"{date},{key},{item[0]},")
+                    if item[1] == "On Player Collision Time":
+                        #Powerup was never activated
+                        file.write(",")
+                    else: 
+                        file.write(f"{item[1]},")
+                    if item[2] == "End Effect Time":
+                        #Powerup effect never ended
+                        file.write(",")
+                    else:
+                        file.write(f"{item[2]},") 
+                    if item[3] == 0:
+                        file.write("\n")
+                    else:
+                        file.write(f"{item[3]}\n")
+
+    def save_game_end_data(self, date):
+        obj = self.player.collision_object
+        file = open("Data/game-end-data.csv", "a")
+        file.write(f"{date},{obj.__class__.__name__}")
+        if obj.__class__.__name__ != "Border":
+            file.write(f",{obj.time_spawned},")
+        else:
+            file.write(",,")
+        file.write(f"{len(self.objects)-2}\n")
         file.close()
