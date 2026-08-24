@@ -6,7 +6,7 @@ import time
 
 global times
 
-# Version 7
+# Version 8
 
 times = []
 window = Tk()
@@ -15,7 +15,7 @@ canvasHeight = 720
 canvas = Canvas(window, width=canvasWidth, height=canvasHeight, bg="white" )
 canvas.pack()
 
-effects = (GameObjects.Score_Increase(), GameObjects.Powerup_Spawner())
+effects = (GameObjects.Score_Increase(), GameObjects.Powerup_Spawner(), GameObjects.Sweeper_Spawner())
 powerups = (GameObjects.Eat_Enemy_Powerup, GameObjects.Score_Increase_Powerup, GameObjects.Temp_Change_Colour_Powerup)
 game = GameObjects.Game(canvas, effects=effects, enemy_types=(GameObjects.Cube), powerups=powerups)
 
