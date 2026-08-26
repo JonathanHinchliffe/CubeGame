@@ -468,12 +468,18 @@ class Player(Game_Object):
 
 class Item(Cube):
 
-    def __init__(self, size = 40, position=dict(x=0, y=0), velocity=Velocity(0, 0), colour="grey"):
+    def __init__(self, size = 40, position=dict(x=0, y=0), velocity=Velocity(0, 0), colour="grey", info=None):
         #print(position)
         super().__init__(size = size, position = position, velocity = velocity, colour=colour)
         self.info = ["Start Time", "On Player Collision Time", "End Effect Time", 0]
+        self.timer = None
+        if info != None:
+            self.previous_powerups = info["previous_powerups"]
     def on_player_collision(self):
         self.info[3] += 1
+
+    def matching_powerup(self):
+        pass
 
 class Timed_Effect(ABC):
 
@@ -520,8 +526,8 @@ class Temp_Change_Colour_Powerup(Change_Colour_Powerup, Timed_Effect):
             self.player_original_colour = player.game_object.colour
             self.effect_active = True
             player.game_object.colour = self.colour
-            timer = threading.Timer((self.effect_length/1000), lambda self=self, player=player: self.end_effect(player))
-            timer.start()
+            self.timer = threading.Timer((self.effect_length/1000), lambda self=self, player=player: self.end_effect(player))
+            self.timer.start()
 
 
     def end_effect(self, player):
@@ -533,7 +539,7 @@ class Temp_Change_Colour_Powerup(Change_Colour_Powerup, Timed_Effect):
 class Eat_Enemy_Powerup(Item, Timed_Effect):
 
     def __init__(self, info, effect_length = 5000, size = 40, position=dict(x=0, y=0), velocity=Velocity(0, 0), colour="purple"):
-        super().__init__(size = size, position = position, velocity = velocity, colour = colour)
+        super().__init__(size = size, position = position, velocity = velocity, colour = colour, info=info)
         self.effect_length = effect_length
         self.game_timer = info["game_timer"]
         self.info[0] = time.time() - self.game_timer
@@ -547,17 +553,31 @@ class Eat_Enemy_Powerup(Item, Timed_Effect):
 
     def start_effect(self, player):
         print("START EFFECT")
+        for p in self.previous_powerups:
+            if p != self and p.__class__ == self.__class__:
+                p.matching_powerup()
         player.remove_enemy_on_collision = True
         self.effect_active = True
-        timer = threading.Timer((self.effect_length/1000), lambda self=self, player=player: self.end_effect(player))
-        timer.start()
+        self.timer = threading.Timer((self.effect_length/1000), lambda self=self, player=player: self.end_effect(player))
+        self.timer.start()
 
     def end_effect(self, player):
-        super().on_player_collision()
         self.effect_active = False
         self.info[2] = time.time() - self.game_timer
         print("END EFFECT")
         player.remove_enemy_on_collision = False
+        self.previous_powerups.remove(self)
+
+    def matching_powerup(self):
+        #print("matching_powerup called")
+        if self.timer != None:
+            if self.timer.is_alive():
+                #print("Cancelling effect end")
+                self.effect_active = False
+                self.info[2] = time.time() - self.game_timer
+                self.timer.cancel()
+                self.previous_powerups.remove(self)
+        
 
 
 class Score_Increase_Powerup(Item, Timed_Effect):
@@ -616,8 +636,8 @@ class Score_Increase(Timed_Effect):
     def start_effect(self, info):
         #print("EFFECT START")
         info["score"].score_increase += 1
-        timer = threading.Timer((self.effect_length/1000), lambda score=info["score"]: self.end_effect(score))
-        timer.start()
+        self.timer = threading.Timer((self.effect_length/1000), lambda score=info["score"]: self.end_effect(score))
+        self.timer.start()
 
     def end_effect(self, score):
         #print("EFFECT END")
@@ -630,8 +650,8 @@ class Powerup_Spawner(Timed_Effect):
     def start_effect(self, info):
         #print(info)
         #print("EFFECT START")
-        timer = threading.Timer((Powerup_Spawner.effect_length/1000), lambda info=info: self.end_effect(info))
-        timer.start()
+        self.timer = threading.Timer((Powerup_Spawner.effect_length/1000), lambda info=info: self.end_effect(info))
+        self.timer.start()
 
     def end_effect(self, info):
         powerup = info["powerups"][random.randint(0,len(info["powerups"])-1)]
@@ -642,9 +662,11 @@ class Powerup_Spawner(Timed_Effect):
             if new_powerup.closest_object(info["objects"])[1] > 75:
                 i += 50
                 info["objects"].append(new_powerup)
+                info["previous_powerups"].append(new_powerup)
                 new_powerup.position["x"] = random.randint(25,info["objects"][1].width-25)
                 new_powerup.position["y"] = random.randint(25,info["objects"][1].height-25)
             i += 1
+
         self.start_effect(info)
 
 class Sweeper_Spawner(Timed_Effect):
@@ -653,8 +675,8 @@ class Sweeper_Spawner(Timed_Effect):
     directions = ["Up", "Down", "Left", "Right"]
 
     def start_effect(self, info):
-        timer = threading.Timer((Sweeper_Spawner.effect_length/1000), lambda info=info: self.end_effect(info))
-        timer.start()
+        self.timer = threading.Timer((Sweeper_Spawner.effect_length/1000), lambda info=info: self.end_effect(info))
+        self.timer.start()
 
     def end_effect(self, info):
         new_direction=Sweeper_Spawner.directions[random.randint(0,len(Sweeper_Spawner.directions)-1)]
@@ -708,7 +730,7 @@ class Game:
         print("START GAME")
         self.frame_update()
         for effect in self.effects:
-            effect.start_effect(info = dict(score = self.score, objects = self.objects, powerups=self.powerups, powerup_data=self.powerup_data, game_timer = self.game_timer, border=self.border))
+            effect.start_effect(info = dict(score = self.score, objects = self.objects, powerups=self.powerups, powerup_data=self.powerup_data, game_timer = self.game_timer, border=self.border, previous_powerups=[]))
 
     def frame_update(self):
         self.canvas.delete("all")
