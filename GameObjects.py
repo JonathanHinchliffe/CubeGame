@@ -88,9 +88,10 @@ class Collision_Rectangle(Collision_Model):
 class Velocity:
 
 
-    def __init__(self, angle = 0, speed = 0):
+    def __init__(self, angle = 0, speed = 0, static=False):
         self.speed = speed
         self.angle = angle
+        self.static = static
         #print(speed, angle)
         if self.speed != 0:
             self.update_components(message="Speed not 0 on init")
@@ -101,7 +102,6 @@ class Velocity:
         if self.speed == 0:
             return 0
         if self.angle == 0 or self.angle == 180:
-            #print("What?")
             return 0
         elif self.angle == 90:
             return self.speed
@@ -144,10 +144,14 @@ class Velocity:
         self.y = self.calculate_y()
 
     def set_speed(self, speed):
+        if self.static:
+            return
         self.speed = speed
         self.update_components(message="Changed speed")
 
     def set_angle(self, angle):
+        if self.static:
+            return
         if angle < 0:
             angle = 360-angle
         if angle >= 360:
@@ -264,9 +268,17 @@ class Cube(Game_Object, Collision_Rectangle):
             hit_object.velocity.set_angle(hit_object.velocity.angle)
             hit_object.position_update()
             return
+        elif (hit_object.velocity.x == 0 or hit_object.velocity.y == 0):
+            return
         else:
+            if hit_object.velocity.x == 0 and hit_object.velocity.speed != 0:
+                object_gradient = 10000
+            if hit_object.velocity.y == 0 and hit_object.velocity.speed != 0:
+                object_gradient = 0
+            else:
+                object_gradient = hit_object.velocity.y / hit_object.velocity.x
             self_gradient = self.velocity.y / self.velocity.x
-            object_gradient = hit_object.velocity.y / hit_object.velocity.x
+            
             if (self.velocity.y / self.velocity.x)*(hit_object.velocity.y / hit_object.velocity.x) != 1:
                 intercept_angle = math.degrees(math.atan((object_gradient-self_gradient)/(1-(object_gradient*self_gradient))))
             else:
@@ -402,12 +414,16 @@ class Sweeper(Game_Object, Collision_Rectangle):
         print(f"x : {self.position["x"]}, y : {self.position["y"]}")
 
 
-        if (-self.width//2 < self.position["x"]) or (self.info["border"].width + (self.width//2) < self.position["x"]):
+        if ((1-self.info["border"].width) > self.position["x"]) or (self.info["border"].width*2  < self.position["x"]):
             #now off screen
+            #print(f"{(1-self.info["border"].width)} < {self.position["x"]} < {(2*self.info["border"].width)}")
+            #print(f"position : {self.position["x"]}, {self.position["y"]}\nvelocity : angle {self.velocity.angle}, speed {self.velocity.speed}\ndimensions : {self.width}, {self.height}")
             self.remove = True
 
-        if (-self.height//2 < self.position["y"]) or (self.info["border"].height + (self.height//2) < self.position["y"]):
+        if ((1-self.info["border"].height) > self.position["y"]) or (self.info["border"].height*2 < self.position["y"]):
             #now off screen
+            #print(f"{self.info["border"].height} height")
+            #print(f"position : {self.position["x"]}, {self.position["y"]}\nvelocity : angle {self.velocity.angle}, speed {self.velocity.speed}\ndimensions : {self.width}, {self.height}")
             self.remove = True
 
     def render(self, canvas):
@@ -671,7 +687,7 @@ class Powerup_Spawner(Timed_Effect):
 
 class Sweeper_Spawner(Timed_Effect):
 
-    effect_length = 20000
+    effect_length = 12000
     directions = ["Up", "Down", "Left", "Right"]
 
     def start_effect(self, info):
@@ -686,11 +702,11 @@ class Sweeper_Spawner(Timed_Effect):
             offset= random.randint(info["border"].width//4, ((info["border"].width//4)+(info["border"].width//2)))
             start_position = dict(x = offset)
             if new_direction == "Up":
-                velocity = Velocity(angle = 0, speed=10)
-                start_position["y"] = info["border"].height + (thickness//2)
+                velocity = Velocity(angle = 0, speed=10, static=True)
+                start_position["y"] = info["border"].height + (thickness//2) - 2
             else:
-                velocity = Velocity(angle = 180, speed=10)
-                start_position["y"] = -(thickness//2)
+                velocity = Velocity(angle = 180, speed=10, static=True)
+                start_position["y"] = -(thickness//2) + 2
             print(f"Moving {new_direction}, angle : {velocity.angle}")
             info["objects"].append(Sweeper(height=thickness,width=length,position=start_position,velocity=velocity,info=info))
         else:
@@ -698,11 +714,11 @@ class Sweeper_Spawner(Timed_Effect):
             offset= random.randint(info["border"].height//4, ((info["border"].height//4)+(info["border"].height//2)))
             start_position = dict(y = offset)
             if new_direction == "Right":
-                velocity = Velocity(angle = 90, speed=10)
-                start_position["x"] = -(thickness//2)
+                velocity = Velocity(angle = 90, speed=10, static=True)
+                start_position["x"] = -(thickness//2) + 2
             else:
-                velocity = Velocity(angle = 270, speed=10)
-                start_position["x"] = info["border"].width + (thickness//2)
+                velocity = Velocity(angle = 270, speed=10, static=True)
+                start_position["x"] = info["border"].width + (thickness//2) - 2
             print(f"Moving {new_direction}, angle : {velocity.angle}")
             info["objects"].append(Sweeper(height=length,width=thickness,position=start_position,velocity=velocity,info=info))
         self.start_effect(info)
@@ -736,7 +752,6 @@ class Game:
         self.canvas.delete("all")
         if len(self.objects) < self.max_enemies+2:
             self.spawn_enemy()
-            
         for obj in self.objects:
             if obj.__class__.__name__ == "Border":
                 pass
