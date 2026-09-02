@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from ast import Tuple
-from ipaddress import collapse_addresses
 from tkinter import *
 import math
 import threading
@@ -8,9 +7,7 @@ import random
 import time
 import datetime
 import os
-from token import STAR
-
-from matplotlib.font_manager import X11FontDirectories
+import sqlite3
 
 
 class Game_Object(ABC):
@@ -842,3 +839,81 @@ class Game:
             file.write(",,")
         file.write(f"{len(self.objects)-2}\n")
         file.close()
+
+class Database_Handler:
+
+    def __init__(self, db_address = "Data/db.sqlite3", load_powerups = True, load_effects = True):
+        self.db = sqlite3.connect(db_address)
+        if load_powerups:
+            self.powerups = self.get_powerups()
+        if load_effects:
+            self.effects = self.get_effects()
+
+    def get_powerups(self):
+        cur = self.db.cursor()
+        res = cur.execute("SELECT powerupID, powerup_name FROM Powerups")
+        return res.fetchall()
+
+    def get_effects(self):
+        cur = self.db.cursor()
+        res = cur.execute("SELECT effectID, effect_name FROM Effects")
+        return res.fetchall()
+
+    def add_powerup(self, powerup_name):
+        cur = self.db.cursor()
+        cur.execute(f"INSERT INTO Powerups (powerup_name) VALUES ('{powerup_name}')")
+        self.db.commit()
+
+    def add_effect(self,effect_name):
+        cur = self.db.cursor()
+        cur.execute(f"INSERT INTO Effects (effect_name) VALUES ('{effect_name}')")
+        self.db.commit()
+
+    def set_GameRunPowerups(self,powerups, date):
+        cur = self.db.cursor()
+        values = []
+        for powerup in powerups:
+            p_name = powerup.__name__
+            p_name = p_name.replace("_Powerup", '')
+            p_name = p_name.replace("_", ' ')
+            #print(self.powerups)
+            #print(p_name)
+            x = 0
+            while x < len(self.powerups):
+                if p_name == self.powerups[x][1]:
+                    values.append((date, x+1))
+                    x += len(self.powerups)+10
+                x += 1
+            if x < len(self.powerups) + 5:
+                self.add_powerup(p_name)
+                values.append((date, len(self.powerups)+1))
+        if values != []:
+            text = "INSERT INTO GameRunPowerups (date, powerupID) VALUES"
+            for value in values:
+                text += f"('{value[0]}', {value[1]}),"
+            text= text[:-1]
+            cur.execute(text)
+            self.db.commit()
+
+    def set_GameRunEffects(self, effects, date):
+        cur = self.db.cursor()
+        values = []
+        for effect in effects:
+            e_name = effect.__class__.__name__
+            e_name = e_name.replace("_", ' ')
+            x = 0
+            while x < len(self.effects):
+                if e_name == self.effects[x][1]:
+                    values.append((date, x+1))
+                    x += len(self.effects)+10
+                x += 1
+            if x < len(self.effects) + 5:
+                self.add_effect(e_name)
+                values.append((date, len(self.effects)+1))
+        if values != []:
+            text = "INSERT INTO GameRunEffects (date, effectID) VALUES"
+            for value in values:
+                text += f"('{value[0]}', {value[1]}),"
+            text= text[:-1]
+            cur.execute(text)
+            self.db.commit()
