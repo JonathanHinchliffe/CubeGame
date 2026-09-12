@@ -9,7 +9,7 @@ import datetime
 import os
 import sqlite3
 
-
+#region GameObject Classes
 class Game_Object(ABC):
     
     remove = False
@@ -478,8 +478,8 @@ class Player(Game_Object):
 
     def frame_update(self):
         pass
-
-
+#endregion
+#region Powerup Classes
 class Item(Cube):
 
     def __init__(self, size = 40, position=dict(x=0, y=0), velocity=Velocity(0, 0), colour="grey", info=None):
@@ -625,7 +625,7 @@ class Score_Increase_Powerup(Item, Timed_Effect):
             score.score_increase = (score.score_increase//2)+1
         else:
             score.score_increase = score.score_increase//2
-
+#endregion
 
 class Score(Game_Object):
 
@@ -640,6 +640,7 @@ class Score(Game_Object):
     def render(self):
         pass
 
+# region Effects Classes
 class Score_Increase(Timed_Effect):
 
     def __init__(self, increase = 1, effect_length = 5000):
@@ -720,7 +721,7 @@ class Sweeper_Spawner(Timed_Effect):
             print(f"Moving {new_direction}, angle : {velocity.angle}")
             info["objects"].append(Sweeper(height=length,width=thickness,position=start_position,velocity=velocity,info=info))
         self.start_effect(info)
-        
+# endregion        
 
 class Game:
 
