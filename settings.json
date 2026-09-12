@@ -1,5 +1,8 @@
 {
-  "fullscreen": true,
+  "fullscreen": false,
   "resolution": "1280x720",
-  "user": null 
+  "user": null,
+  "app_name": "Cube Game",
+  "font": "Minion Pro Med",
+  "save_user": true
 }
