@@ -57,6 +57,7 @@ class Collision_Rectangle(Collision_Model):
     def collision_check(self, objects = []):
         self.calculate_outline()
         collisions = []
+        border_collisions = None
         for o in objects:
             if isinstance(o, Border):
                 border_collisions = self.border_collision_check(o)
@@ -80,7 +81,7 @@ class Collision_Rectangle(Collision_Model):
         return (border_collisions, collisions)
     
     def border_collision_check(self,o):
-        pass
+        return
 
 class Velocity:
 
@@ -392,18 +393,18 @@ class Sweeper(Game_Object, Collision_Rectangle):
         if info != None:
             self.time_spawned = time.time() - info["game_timer"]
             self.info = info
-        print("Sweeper Spawned")
-
-    def collision_check(self, objects=[]):
-        collisions = super().collision_check()
-        collisions[0] = []
-        return collisions
+        #print("Sweeper Spawned")
 
     def frame_update(self, objects=[],frame_rate = 30):
         if self.velocity.angle != self.permenant_angle:
             print(f"Angle Changed from {self.permenant_angle} to {self.velocity.angle}")
             self.velocity.set_angle(self.permenant_angle)
         self.position_update()
+        bc, collisions = self.collision_check(objects)
+        for obj in collisions:
+            if obj[0].__class__ == Player:
+                obj[0].hit = True
+                break
 
     def position_update(self, frame_rate = 30):
         self.position["x"] = round(self.position["x"] + (self.velocity.x),2)
@@ -413,14 +414,10 @@ class Sweeper(Game_Object, Collision_Rectangle):
 
         if ((1-self.info["border"].width) > self.position["x"]) or (self.info["border"].width*2  < self.position["x"]):
             #now off screen
-            #print(f"{(1-self.info["border"].width)} < {self.position["x"]} < {(2*self.info["border"].width)}")
-            #print(f"position : {self.position["x"]}, {self.position["y"]}\nvelocity : angle {self.velocity.angle}, speed {self.velocity.speed}\ndimensions : {self.width}, {self.height}")
             self.remove = True
 
         if ((1-self.info["border"].height) > self.position["y"]) or (self.info["border"].height*2 < self.position["y"]):
             #now off screen
-            #print(f"{self.info["border"].height} height")
-            #print(f"position : {self.position["x"]}, {self.position["y"]}\nvelocity : angle {self.velocity.angle}, speed {self.velocity.speed}\ndimensions : {self.width}, {self.height}")
             self.remove = True
 
     def render(self, canvas):
@@ -437,6 +434,9 @@ class Sweeper(Game_Object, Collision_Rectangle):
         if y2 > int(canvas.winfo_height()):
             y2 = int(canvas.winfo_height())
         canvas.create_rectangle(self.position["x"]-(self.width//2), self.position["y"]-(self.height//2), self.position["x"]+(self.width//2), self.position["y"]+(self.height//2), fill=self.colour)
+
+    def collision_check(self, objects):
+        return super().collision_check(objects)
 
 class Player(Game_Object):
 
@@ -471,6 +471,7 @@ class Player(Game_Object):
                         self.collision_object.on_player_collision(self)
                         self.collision_object.remove = True
                         self.hit = False
+
                     if self.remove_enemy_on_collision:
                         self.collision_object.remove = True
                         self.hit = False
