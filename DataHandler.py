@@ -1,4 +1,5 @@
 import sqlite3
+import GameObjects as go
 
 class Database_Handler:
 
@@ -93,7 +94,7 @@ class Database_Handler:
 
         score_per_second = score/time_survived
         time_object_spawned = 0
-        if collision_object.__class__ != Border:
+        if collision_object.__class__ != go.Border:
             time_object_spawned = collision_object.time_spawned
         print(date)
         values = f"('{date}', '{game_version}', '{time_survived}', '{score}', '{score_per_second}','{collision_object.__class__.__name__}', '{time_object_spawned}', {enemies_alive}, {total_enemies_spawned})"

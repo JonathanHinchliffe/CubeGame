@@ -7,6 +7,7 @@ import random
 import time
 import datetime
 import os
+import DataHandler
 
 #region GameObject Classes
 class Game_Object(ABC):
@@ -809,7 +810,7 @@ class Game:
         self.save_to_db(date, game_version, time_survived)
 
     def save_to_db(self, date, game_version, time_survived):
-        dh = Database_Handler()
+        dh = DataHandler.Database_Handler()
         num_enemies = 0
         for o in self.objects: 
             if o.__class__ == Cube: 
