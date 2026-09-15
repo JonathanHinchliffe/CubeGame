@@ -7,7 +7,7 @@
     <File Path="Data/powerup-data.csv" />
     <File Path="Powerup-Visualiser.ipynb" />
   </Folder>
-  <Project Path="CubeGame.pyproj" Type="888888a0-9f3d-457c-b088-3a5042f75d52" Id="1612dee1-3240-422e-91e8-017b2c44b9fa">
+  <Project Path="CubeGame.pyproj" Type="888888a0-9f3d-457c-b088-3a5042f75d52" Id="3f3faf8c-a1ff-4240-b254-596b42a156ac">
     <Build Project="false" />
   </Project>
 </Solution>

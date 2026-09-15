@@ -752,7 +752,7 @@ class Game:
         self.canvas.delete("all")
         if len(self.objects) < self.max_enemies+2:
             self.spawn_enemy()
-        for obj in self.objects:
+        for obj in self.objects.copy():
             if obj.__class__.__name__ == "Border":
                 pass
             elif obj.__class__.__name__ == "Player":
@@ -763,7 +763,7 @@ class Game:
                 obj.frame_update(objects=self.objects)
                 obj.render(self.canvas)
         if self.player.hit == False:
-            self.canvas.master.after((1000//self.frame_rate), self.frame_update)
+            self.frame_update_id = self.canvas.master.after((1000//self.frame_rate), self.frame_update)
             self.score.frame_update()
         else:
             self.end_game()
@@ -798,6 +798,7 @@ class Game:
         pass
 
     def end_game(self):
+        self.canvas.master.after_cancel(self.frame_update_id)
         game_version = os.path.getmtime("CubeGame.py")
         game_version = datetime.datetime.fromtimestamp(game_version)
         date = datetime.datetime.now()
@@ -808,6 +809,9 @@ class Game:
         self.save_powerup_data(date)
         self.save_game_end_data(date)
         self.save_to_db(date, game_version, time_survived)
+        for effect in self.effects:
+            effect.timer.cancel()
+        self.to_end_screen()
 
     def save_to_db(self, date, game_version, time_survived):
         dh = DataHandler.Database_Handler()
@@ -857,3 +861,11 @@ class Game:
         file.write(f"{len(self.objects)-2}\n")
         file.close()
 
+    def set_app(self, app):
+        self.app = app
+
+    def to_end_screen(self):
+        if hasattr(self, "app") and hasattr(self.app, "to_game_over"):
+            self.app.to_game_over()
+        else:
+            print("App or method doesn't exist")

@@ -136,9 +136,33 @@ class App:
         self.canvas.pack()
         self.game_screen_created = True
 
+    def create_game_over_screen(self):
+        self.game_over_frame = tk.Frame(self.root)
+        display = lambda self = self: self.game_over_frame.pack()
+        display()
+        self.settings["frames"]["game_over_frame"] = dict(name = self.game_over_frame, display = display)
+        text = f"Score : {self.game.score.score}"
+        self.score_label = tk.Label(self.game_over_frame, text=text, font=self.settings["settings_text"])
+        self.score_label.pack(padx=10,pady=10)
+
+        self.go_button_frame = tk.Frame(self.root)
+        display = lambda self = self: self.go_button_frame.place(relx=0.5, rely=0.45, anchor=tk.N)
+        display()
+        self.settings["frames"]["go_button_frame"] = dict(name = self.go_button_frame, display = display)
+
+        start_game = lambda self=self: self.to_game_screen()
+        self.restart_button = tk.Button(self.go_button_frame, width=12, text="Start Game", font=self.settings["button_text"], command=start_game)
+        self.restart_button.pack()
+
+        to_main_menu = lambda self=self: self.to_main_menu()
+        self.main_menu_button = tk.Button(self.go_button_frame, width=12, text="Main Menu", font=self.settings["button_text"], command=to_main_menu)
+        self.main_menu_button.pack(pady=(10,0))
+
+        self.game_over_screen_created = True
+
     def hide_everything(self):
         for key, value in self.settings["frames"].items():
-            if "mm_button" in key:
+            if "button_frame" in key:
                 value["name"].place_forget()
             else:
                 value["name"].pack_forget()
@@ -163,9 +187,25 @@ class App:
         self.hide_everything()
         if self.game_screen_created:
             self.settings["frames"]["game_screen_frame"]["display"]()
+            self.canvas.delete("all")
         else:
             self.create_game_screen()
         self.start_game()
+
+    def to_game_over(self):
+        self.hide_everything()
+
+        self.settings["frames"]["header_frame"]["display"]()
+        self.root.unbind("<Motion>")
+
+        if self.game_over_screen_created:
+            self.settings["frames"]["game_over_frame"]["display"]()
+            self.settings["frames"]["go_button_frame"]["display"]()
+        else:
+            self.create_game_over_screen()
+        
+        self.close_game()
+
 
     def start_game(self):
         powerups = []
@@ -181,9 +221,10 @@ class App:
                 name = e[1].replace(" ", "_")
                 effects.append(getattr(go,name)())
         effects = tuple(effects)
-        self.game = go.Game(self.canvas, effects=effects, enemy_types=(go.Cube), powerups=powerups)
+        self.game = go.Game(self.canvas, effects=effects, enemy_types=(go.Cube), powerups=powerups,player = go.Player(go.Cube(size=40, position=dict(x=700,y=400),colour="blue")))
         self.root.bind("<Motion>", lambda event, objects=self.game.objects: self.game.player.position_update(event=event, objects=objects))
         self.root.update()
+        self.game.set_app(self)
         self.game.start_game()
 
     def toggle_button(self, button, id=-1, type=""):
@@ -200,6 +241,10 @@ class App:
         self.main_menu_created = False
         self.settings_menu_created = False
         self.game_screen_created = False
+        self.game_over_screen_created = False
+
+    def close_game(self):
+        del self.game
 
 def clear_placeholder(event, text_box):
     if text_box.get() == "Username":
