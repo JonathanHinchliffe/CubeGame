@@ -30,6 +30,21 @@ class Database_Handler:
         res = cur.execute("SELECT effectID, effect_name FROM Effects")
         return res.fetchall()
 
+    def get_users(self):
+        cur = self.db.cursor()
+        res = cur.execute("SELECT userID, username FROM Users")
+        self.users = res.fetchall()
+
+
+    def get_user(self, target):
+        if hasattr(self, 'users') == False:
+            self.get_users()
+        for id, name in self.users:
+            if id == target:
+                return name
+            if name == target:
+                return id
+
     def add_powerup(self, powerup_name):
         cur = self.db.cursor()
         cur.execute(f"INSERT INTO Powerups (powerup_name) VALUES ('{powerup_name}')")
@@ -39,6 +54,11 @@ class Database_Handler:
         cur = self.db.cursor()
         cur.execute(f"INSERT INTO Effects (effect_name) VALUES ('{effect_name}')")
         self.db.commit()
+
+    def add_user(self,username):
+        cur = self.db.cursor()
+        cur.execute(f"INSERT INTO Users (username) VALUES ('{username}')")
+        self.db.commit()    
 
     def set_GameRunPowerups(self,powerups, date):
         cur = self.db.cursor()
@@ -89,7 +109,7 @@ class Database_Handler:
             cur.execute(text)
             self.db.commit()
 
-    def set_GameRun(self, date, game_version, time_survived, score, collision_object, enemies_alive, total_enemies_spawned):
+    def set_GameRun(self, date, game_version, time_survived, score, collision_object, enemies_alive, total_enemies_spawned, user=None):
         cur = self.db.cursor()
 
         score_per_second = score/time_survived
@@ -97,8 +117,19 @@ class Database_Handler:
         if collision_object.__class__ != go.Border:
             time_object_spawned = collision_object.time_spawned
         print(date)
-        values = f"('{date}', '{game_version}', '{time_survived}', '{score}', '{score_per_second}','{collision_object.__class__.__name__}', '{time_object_spawned}', {enemies_alive}, {total_enemies_spawned})"
-        text = "INSERT INTO GameRun (date, game_version_time, time_survived, score, score_per_second, collision_object, time_object_spawned, enemies_alive, total_enemies_spawned) VALUES " + values 
+        if user == None:
+            values = f"('{date}', '{game_version}', '{time_survived}', '{score}', '{score_per_second}','{collision_object.__class__.__name__}', '{time_object_spawned}', {enemies_alive}, {total_enemies_spawned})"
+            text = "INSERT INTO GameRun (date, game_version_time, time_survived, score, score_per_second, collision_object, time_object_spawned, enemies_alive, total_enemies_spawned) VALUES " + values 
+        else:
+            self.get_users()
+            if user in self.users:
+                user = self.get_user(user)
+            else:
+                self.add_user(user)
+                self.get_users()
+                user = self.get_user(user)
+            values = f"('{date}', '{game_version}', '{time_survived}', '{score}', '{score_per_second}','{collision_object.__class__.__name__}', '{time_object_spawned}', {enemies_alive}, {total_enemies_spawned},{user})"
+            text = "INSERT INTO GameRun (date, game_version_time, time_survived, score, score_per_second, collision_object, time_object_spawned, enemies_alive, total_enemies_spawned, userID) VALUES " + values 
         cur.execute(text)
         self.db.commit()
 

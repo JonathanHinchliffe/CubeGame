@@ -221,11 +221,22 @@ class App:
                 name = e[1].replace(" ", "_")
                 effects.append(getattr(go,name)())
         effects = tuple(effects)
+
         self.game = go.Game(self.canvas, effects=effects, enemy_types=(go.Cube), powerups=powerups,player = go.Player(go.Cube(size=40, position=dict(x=700,y=400),colour="blue")))
         self.root.bind("<Motion>", lambda event, objects=self.game.objects: self.game.player.position_update(event=event, objects=objects))
         self.root.update()
+        self.get_username()
+        if self.settings["user"] != None:
+            self.game.set_user(self.settings["user"])
         self.game.set_app(self)
         self.game.start_game()
+
+    def get_username(self):
+        name = self.user_box.get()
+        if name != "Username":
+            self.settings["user"] = name
+        else:
+            self.settings["user"] = None
 
     def toggle_button(self, button, id=-1, type=""):
         if button.cget("bg") == "green2":

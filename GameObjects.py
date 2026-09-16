@@ -725,7 +725,9 @@ class Sweeper_Spawner(Timed_Effect):
 
 class Game:
 
-    def __init__(self, canvas:Canvas, effects:tuple[Timed_Effect,...], enemy_types:tuple[Game_Object,...], powerups:tuple[Item,...] = (), player = Player(Cube(size=40, position=dict(x=700,y=400),colour="blue")), border=Border(1280,720), max_enemies = 20, frame_rate = 10):
+    #def __init__(self, canvas:Canvas, effects:tuple[Timed_Effect,...], enemy_types:tuple[Game_Object,...], powerups:tuple[Item,...] = (), player = Player(Cube(size=40, position=dict(x=700,y=400),colour="blue")), border=Border(1280,720), max_enemies = 20, frame_rate = 10):
+
+    def __init__(self, canvas:Canvas, effects:tuple, enemy_types:tuple, powerups:tuple = (), player = Player(Cube(size=40, position=dict(x=700,y=400),colour="blue")), border=Border(1280,720), max_enemies = 20, frame_rate = 10): 
         self.canvas = canvas
         self.effects = effects
         self.enemy_types = enemy_types
@@ -819,7 +821,10 @@ class Game:
         for o in self.objects: 
             if o.__class__ == Cube: 
                 num_enemies += 1
-        dh.set_GameRun(date, game_version, time_survived,self.score.score, self.player.collision_object, num_enemies, self.total_enemies_spawned)
+        if hasattr(self, 'user'):
+            dh.set_GameRun(date, game_version, time_survived,self.score.score, self.player.collision_object, num_enemies, self.total_enemies_spawned, self.user)
+        else:
+            dh.set_GameRun(date, game_version, time_survived,self.score.score, self.player.collision_object, num_enemies, self.total_enemies_spawned)
         dh.set_GameRunEffects(self.effects, date)
         dh.set_GameRunPowerups(self.powerups, date)
         dh.set_PowerupsActivated(date,self.powerup_data)
@@ -863,6 +868,9 @@ class Game:
 
     def set_app(self, app):
         self.app = app
+
+    def set_user(self, user):
+        self.user = user
 
     def to_end_screen(self):
         if hasattr(self, "app") and hasattr(self.app, "to_game_over"):
