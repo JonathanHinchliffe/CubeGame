@@ -7,9 +7,9 @@ import random
 import time
 import datetime
 import os
-import sqlite3
+import DataHandler
 
-
+#region GameObject Classes
 class Game_Object(ABC):
     
     remove = False
@@ -478,8 +478,8 @@ class Player(Game_Object):
 
     def frame_update(self):
         pass
-
-
+#endregion
+#region Powerup Classes
 class Item(Cube):
 
     def __init__(self, size = 40, position=dict(x=0, y=0), velocity=Velocity(0, 0), colour="grey", info=None):
@@ -625,7 +625,7 @@ class Score_Increase_Powerup(Item, Timed_Effect):
             score.score_increase = (score.score_increase//2)+1
         else:
             score.score_increase = score.score_increase//2
-
+#endregion
 
 class Score(Game_Object):
 
@@ -640,6 +640,7 @@ class Score(Game_Object):
     def render(self):
         pass
 
+# region Effects Classes
 class Score_Increase(Timed_Effect):
 
     def __init__(self, increase = 1, effect_length = 5000):
@@ -720,11 +721,13 @@ class Sweeper_Spawner(Timed_Effect):
             print(f"Moving {new_direction}, angle : {velocity.angle}")
             info["objects"].append(Sweeper(height=length,width=thickness,position=start_position,velocity=velocity,info=info))
         self.start_effect(info)
-        
+# endregion        
 
 class Game:
 
-    def __init__(self, canvas:Canvas, effects:tuple[Timed_Effect,...], enemy_types:tuple[Game_Object,...], powerups:tuple[Item,...] = (), player = Player(Cube(size=40, position=dict(x=700,y=400),colour="blue")), border=Border(1280,720), max_enemies = 20, frame_rate = 10):
+    #def __init__(self, canvas:Canvas, effects:tuple[Timed_Effect,...], enemy_types:tuple[Game_Object,...], powerups:tuple[Item,...] = (), player = Player(Cube(size=40, position=dict(x=700,y=400),colour="blue")), border=Border(1280,720), max_enemies = 20, frame_rate = 10):
+
+    def __init__(self, canvas:Canvas, effects:tuple, enemy_types:tuple, powerups:tuple = (), player = Player(Cube(size=40, position=dict(x=700,y=400),colour="blue")), border=Border(1280,720), max_enemies = 20, frame_rate = 10): 
         self.canvas = canvas
         self.effects = effects
         self.enemy_types = enemy_types
@@ -751,7 +754,7 @@ class Game:
         self.canvas.delete("all")
         if len(self.objects) < self.max_enemies+2:
             self.spawn_enemy()
-        for obj in self.objects:
+        for obj in self.objects.copy():
             if obj.__class__.__name__ == "Border":
                 pass
             elif obj.__class__.__name__ == "Player":
@@ -762,7 +765,7 @@ class Game:
                 obj.frame_update(objects=self.objects)
                 obj.render(self.canvas)
         if self.player.hit == False:
-            self.canvas.master.after((1000//self.frame_rate), self.frame_update)
+            self.frame_update_id = self.canvas.master.after((1000//self.frame_rate), self.frame_update)
             self.score.frame_update()
         else:
             self.end_game()
@@ -797,6 +800,7 @@ class Game:
         pass
 
     def end_game(self):
+        self.canvas.master.after_cancel(self.frame_update_id)
         game_version = os.path.getmtime("CubeGame.py")
         game_version = datetime.datetime.fromtimestamp(game_version)
         date = datetime.datetime.now()
@@ -807,14 +811,20 @@ class Game:
         self.save_powerup_data(date)
         self.save_game_end_data(date)
         self.save_to_db(date, game_version, time_survived)
+        for effect in self.effects:
+            effect.timer.cancel()
+        self.to_end_screen()
 
     def save_to_db(self, date, game_version, time_survived):
-        dh = Database_Handler()
+        dh = DataHandler.Database_Handler()
         num_enemies = 0
         for o in self.objects: 
             if o.__class__ == Cube: 
                 num_enemies += 1
-        dh.set_GameRun(date, game_version, time_survived,self.score.score, self.player.collision_object, num_enemies, self.total_enemies_spawned)
+        if hasattr(self, 'user'):
+            dh.set_GameRun(date, game_version, time_survived,self.score.score, self.player.collision_object, num_enemies, self.total_enemies_spawned, self.user)
+        else:
+            dh.set_GameRun(date, game_version, time_survived,self.score.score, self.player.collision_object, num_enemies, self.total_enemies_spawned)
         dh.set_GameRunEffects(self.effects, date)
         dh.set_GameRunPowerups(self.powerups, date)
         dh.set_PowerupsActivated(date,self.powerup_data)
@@ -856,146 +866,14 @@ class Game:
         file.write(f"{len(self.objects)-2}\n")
         file.close()
 
-class Database_Handler:
+    def set_app(self, app):
+        self.app = app
 
-    def __init__(self, db_address = "Data/db.sqlite3", load_powerups = True, load_effects = True):
-        self.db = sqlite3.connect(db_address)
-        if load_powerups:
-            self.powerups = self.get_powerups()
-        if load_effects:
-            self.effects = self.get_effects()
+    def set_user(self, user):
+        self.user = user
 
-    def get_powerups(self):
-        cur = self.db.cursor()
-        res = cur.execute("SELECT powerupID, powerup_name FROM Powerups")
-        return res.fetchall()
-
-    def get_powerup(self,target):
-        target = target.replace("_Powerup", '')
-        target = target.replace("_", ' ')
-        for id, name in self.powerups:
-            #print(f"target: {target}, id: {id}, name: {name}")
-            if id == target:
-                return name
-            if name == target:
-                return id
-
-    def get_effects(self):
-        cur = self.db.cursor()
-        res = cur.execute("SELECT effectID, effect_name FROM Effects")
-        return res.fetchall()
-
-    def add_powerup(self, powerup_name):
-        cur = self.db.cursor()
-        cur.execute(f"INSERT INTO Powerups (powerup_name) VALUES ('{powerup_name}')")
-        self.db.commit()
-
-    def add_effect(self,effect_name):
-        cur = self.db.cursor()
-        cur.execute(f"INSERT INTO Effects (effect_name) VALUES ('{effect_name}')")
-        self.db.commit()
-
-    def set_GameRunPowerups(self,powerups, date):
-        cur = self.db.cursor()
-        values = []
-        for powerup in powerups:
-            p_name = powerup.__name__
-            p_name = p_name.replace("_Powerup", '')
-            p_name = p_name.replace("_", ' ')
-            #print(self.powerups)
-            #print(p_name)
-            x = 0
-            while x < len(self.powerups):
-                if p_name == self.powerups[x][1]:
-                    values.append((date, x+1))
-                    x += len(self.powerups)+10
-                x += 1
-            if x < len(self.powerups) + 5:
-                self.add_powerup(p_name)
-                values.append((date, len(self.powerups)+1))
-        if values != []:
-            text = "INSERT INTO GameRunPowerups (date, powerupID) VALUES"
-            for value in values:
-                text += f"('{value[0]}', {value[1]}),"
-            text= text[:-1]
-            cur.execute(text)
-            self.db.commit()
-
-    def set_GameRunEffects(self, effects, date):
-        cur = self.db.cursor()
-        values = []
-        for effect in effects:
-            e_name = effect.__class__.__name__
-            e_name = e_name.replace("_", ' ')
-            x = 0
-            while x < len(self.effects):
-                if e_name == self.effects[x][1]:
-                    values.append((date, x+1))
-                    x += len(self.effects)+10
-                x += 1
-            if x < len(self.effects) + 5:
-                self.add_effect(e_name)
-                values.append((date, len(self.effects)+1))
-        if values != []:
-            text = "INSERT INTO GameRunEffects (date, effectID) VALUES"
-            for value in values:
-                text += f"('{value[0]}', {value[1]}),"
-            text= text[:-1]
-            cur.execute(text)
-            self.db.commit()
-
-    def set_GameRun(self, date, game_version, time_survived, score, collision_object, enemies_alive, total_enemies_spawned):
-        cur = self.db.cursor()
-
-        score_per_second = score/time_survived
-        time_object_spawned = 0
-        if collision_object.__class__ != Border:
-            time_object_spawned = collision_object.time_spawned
-        print(date)
-        values = f"('{date}', '{game_version}', '{time_survived}', '{score}', '{score_per_second}','{collision_object.__class__.__name__}', '{time_object_spawned}', {enemies_alive}, {total_enemies_spawned})"
-        text = "INSERT INTO GameRun (date, game_version_time, time_survived, score, score_per_second, collision_object, time_object_spawned, enemies_alive, total_enemies_spawned) VALUES " + values 
-        cur.execute(text)
-        self.db.commit()
-
-    def set_PowerupsActivated(self, date, powerup_data):
-        cur = self.db.cursor()
-
-        spawned_list = ""
-        activated_list = ""
-        ended_list = ""
-        for key in powerup_data.keys():
-            if powerup_data[key] != []:
-                # there is a powerup of this type that has been activated
-                for item in powerup_data[key]:
-                    if item[0] == "Start Time":
-                        continue
-                    value = f"('{date}', {self.get_powerup(key)},'{item[0]}'"
-                    if item[1] == "On Player Collision Time":
-                        value += "),"
-                        spawned_list += value
-                        continue
-                    else:
-                        value += f",'{item[1]}'"
-                    if item[2] == "End Effect Time":
-                        value += "),"
-                        activated_list += value
-                    else:
-                        value += f",'{item[2]}'),"
-                        ended_list += value
-
-        if spawned_list != "":
-            spawned_list = spawned_list[:-1]
-            text = "INSERT INTO PowerupsSpawned (date, powerupID, time_spawned) VALUES " + spawned_list
-            cur.execute(text)
-        #print(spawned_list)
-        if activated_list != "":
-            activated_list = activated_list[:-1]
-            text = "INSERT INTO PowerupsSpawned (date, powerupID, time_spawned, time_activated) VALUES " + activated_list
-            cur.execute(text)
-        #print(activated_list)
-        if ended_list != "":
-            ended_list = ended_list[:-1]
-            text = "INSERT INTO PowerupsSpawned (date, powerupID, time_spawned, time_activated, time_ended) VALUES " + ended_list
-            cur.execute(text)
-        #print(ended_list)
-        self.db.commit()
+    def to_end_screen(self):
+        if hasattr(self, "app") and hasattr(self.app, "to_game_over"):
+            self.app.to_game_over()
+        else:
+            print("App or method doesn't exist")
