@@ -278,7 +278,7 @@ def split_game_version(df, gv=0):
 
         return new_df
 
-def read_game_end_date(file_name="Data/game-end-data.csv"):
+def read_game_end_data(file_name="Data/game-end-data.csv"):
     ge_df = pd.read_csv(file_name,
                         parse_dates=["Date"],
                         header=None,

@@ -176,3 +176,13 @@ class Database_Handler:
         #print(ended_list)
         self.db.commit()
 
+    def get_GameRun_count(self):
+        cur = self.db.cursor()
+        res = cur.execute("SELECT COUNT(*) FROM GameRun")
+        return res.fetchone()[0]
+
+    def get_PowerupsSpawned_count(self):
+        cur = self.db.cursor()
+        res = cur.execute("SELECT COUNT(*) FROM PowerupsSpawned")
+        return res.fetchone()[0]
+
