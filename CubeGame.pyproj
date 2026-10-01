@@ -32,6 +32,7 @@
   <ItemGroup>
     <Content Include="Data-Visualiser.ipynb" />
     <Content Include="requirements.txt" />
+    <Content Include="settings.json" />
   </ItemGroup>
   <ItemGroup>
     <InterpreterReference Include="Global|PythonCore|3.12" />
