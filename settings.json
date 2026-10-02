@@ -1,8 +1,19 @@
 {
-  "fullscreen": false,
-  "resolution": "1280x720",
-  "user": null,
-  "app_name": "Cube Game",
-  "font": "Minion Pro Med",
-  "save_user": true
+    "fullscreen": false,
+    "resolution": "1280x720",
+    "user": null,
+    "app_name": "Cube Game",
+    "font": "Minion Pro Med",
+    "save_user": true,
+    "volume": 0.5,
+    "effects_available": [
+        "Score Increase",
+        "Powerup Spawner",
+        "Sweeper Spawner"
+    ],
+    "powerups_available": [
+        "Score Increase",
+        "Eat Enemy",
+        "Temp Change Colour"
+    ]
 }

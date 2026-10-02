@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import messagebox
 import json
 import DataHandler as dh
 import GameObjects as go
@@ -23,10 +24,24 @@ class App:
             self.settings["height"] = int(self.settings["resolution"].split("x")[1])
             self.settings["powerups"] = []
             for p in sorted(self.dh.get_powerups()):
-                self.settings["powerups"].append([p[0],p[1],True])
+                if any(row == p[1] for row in self.settings["powerups_available"]):
+                    self.settings["powerups"].append([p[0],p[1],True])
+                else:
+                    self.settings["powerups"].append([p[0],p[1],False])
+            for p in self.settings["powerups_available"]:
+                if not any(row[1] == p for row in self.settings["powerups"]):
+                    #self.dh.add_powerup(p)
+                    self.settings["powerups"].append([len(self.settings["powerups"])+1,p,True])
             self.settings["effects"] = []
             for e in sorted(self.dh.get_effects()):
-                self.settings["effects"].append([e[0],e[1],True])
+                if any(row == e[1] for row in self.settings["effects_available"]):
+                    self.settings["effects"].append([e[0],e[1],True])
+                else:
+                    self.settings["effects"].append([e[0],e[1],False])
+            for e in self.settings["effects_available"]:
+                if not any(row[1] == e for row in self.settings["effects"]):
+                    #self.dh.add_effect(e)
+                    self.settings["effects"].append([len(self.settings["effects"])+1,e,True])
             self.settings["frames"] = dict()           
 
     def create_root(self):
@@ -36,6 +51,8 @@ class App:
             self.root.attributes("-fullscreen",True)
         else:
             self.root.geometry(self.settings["resolution"])
+
+        self.root.protocol("WM_DELETE_WINDOW", self.close_app)
 
     def create_main_menu(self):
 
@@ -68,7 +85,8 @@ class App:
         self.settings_button = tk.Button(self.mm_button_frame, width=12, text="Settings", font=self.settings["button_text"], command=to_settings)
         self.settings_button.pack(pady=(10,0))
 
-        self.exit_button = tk.Button(self.mm_button_frame, width=12, text="Exit", font=self.settings["button_text"],command=self.root.destroy)
+        close_app = lambda self=self: self.close_app()
+        self.exit_button = tk.Button(self.mm_button_frame, width=12, text="Exit", font=self.settings["button_text"],command=close_app)
         self.exit_button.pack(pady=(10,0))
 
         self.user_box.bind("<FocusIn>", lambda event, text_box=self.user_box:clear_placeholder(event=event, text_box=text_box))
@@ -96,9 +114,13 @@ class App:
         last_collumn = 2
         
         self.powerup_buttons = []
-        for id, name in sorted(self.dh.powerups):           
+        for id, name, active in sorted(self.settings["powerups"]):           
+            if active:
+                bg = "green2"
+            else:
+                bg = "red"
             self.powerup_buttons.append(
-                tk.Button(self.settings_frame, text=name, font=self.settings["settings_text_small"], bg="green2")
+                tk.Button(self.settings_frame, text=name, font=self.settings["settings_text_small"], bg=bg)
             )
             self.powerup_buttons[-1].grid(row=row, column=last_collumn+1, padx=5,pady=10)
             func = lambda self = self, id = id, type="powerups": self.toggle_button(self.powerup_buttons[id-1], id, type)
@@ -113,9 +135,13 @@ class App:
                                       ).grid(row=row,column=0,columnspan=2,padx=10,pady=10)
         last_collumn=2
         self.effect_buttons = []
-        for id, name in sorted(self.dh.effects):
+        for id, name, active in sorted(self.settings["effects"]):
+            if active:
+                bg = "green2"
+            else:
+                bg = "red"
             self.effect_buttons.append(
-                tk.Button(self.settings_frame, text=name, font=self.settings["settings_text_small"], bg="green2")
+                tk.Button(self.settings_frame, text=name, font=self.settings["settings_text_small"], bg=bg)
             )
             self.effect_buttons[-1].grid(row=row, column=last_collumn+1, padx=5,pady=10)
             func = lambda self = self,id = id, type="effects": self.toggle_button(self.effect_buttons[id-1], id, type)
@@ -254,8 +280,31 @@ class App:
         self.game_screen_created = False
         self.game_over_screen_created = False
 
+    def save_settings(self, settings_loc='settings.json'):
+        saving_settings = dict()
+        saving_settings["fullscreen"] = self.settings["fullscreen"]
+        saving_settings["resolution"] = self.settings["resolution"]
+        if self.settings["save_user"]:
+            saving_settings["user"] = self.settings["user"]
+        else:
+            saving_settings["user"] = None
+        saving_settings["app_name"] = self.settings["app_name"]
+        saving_settings["font"] = self.settings["font"]
+        saving_settings["save_user"] = self.settings["save_user"]
+        saving_settings["volume"] = self.settings["volume"]
+        saving_settings["effects_available"] = [row[1] for row in self.settings["effects"] if row[2]]
+        saving_settings["powerups_available"] = [row[1] for row in self.settings["powerups"] if row[2]]
+        with open(settings_loc, 'w', encoding='utf-8') as file:
+            json.dump(saving_settings, file, indent=4)
+
     def close_game(self):
         del self.game
+
+    def close_app(self):
+        if messagebox.askokcancel("Quit", "Do you want to quit the game?"):
+            print("App closed")
+            self.save_settings()
+            self.root.destroy()
 
 def clear_placeholder(event, text_box):
     if text_box.get() == "Username":
@@ -264,5 +313,6 @@ def clear_placeholder(event, text_box):
 def exit_user_box(event, text_box, settings):
     if text_box.get() == "":
         text_box.insert(0, "Username")
+        settings["user"] = None
     elif settings["save_user"]:
         settings["user"] = text_box.get()   
