@@ -122,7 +122,7 @@ class Database_Handler:
             text = "INSERT INTO GameRun (date, game_version_time, time_survived, score, score_per_second, collision_object, time_object_spawned, enemies_alive, total_enemies_spawned) VALUES " + values 
         else:
             self.get_users()
-            if user in self.users:
+            if user in [user[1] for user in self.users]:
                 user = self.get_user(user)
             else:
                 self.add_user(user)
@@ -185,4 +185,3 @@ class Database_Handler:
         cur = self.db.cursor()
         res = cur.execute("SELECT COUNT(*) FROM PowerupsSpawned")
         return res.fetchone()[0]
-

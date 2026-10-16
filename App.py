@@ -199,6 +199,9 @@ class App:
         self.root.unbind("<Motion>")
 
         if self.game_over_screen_created:
+            #Must change the score Displayed to the new one
+            self.score_label.config(text=f"Score : {self.game.score.score}")
+
             self.settings["frames"]["game_over_frame"]["display"]()
             self.settings["frames"]["go_button_frame"]["display"]()
         else:
